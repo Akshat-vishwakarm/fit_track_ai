@@ -213,3 +213,164 @@ export interface MLPredictionResult {
     type: 'positive' | 'warning' | 'info';
   }>;
 }
+
+export interface FullTelemetryContext {
+  _instruction_for_llm: string;
+  metadata: {
+    platform: string;
+    version: string;
+    exported_at: string;
+    current_local_date: string;
+    user_id: string;
+    user_name?: string;
+    user_email?: string;
+  };
+  habits: {
+    active_habits_count: number;
+    current_streak_days: number;
+    best_streak_days: number;
+    overall_completion_rate_7d_pct: number;
+    overall_completion_rate_30d_pct: number;
+    habits_list: Array<{
+      id: string;
+      name: string;
+      category: string;
+      daily_target: number;
+      unit: string;
+      today_status: 'completed' | 'pending';
+      completions_last_7d: number;
+      completion_rate_7d_pct: number;
+      completions_last_30d: number;
+      completion_rate_30d_pct: number;
+      recent_completed_dates: string[];
+    }>;
+    daily_timeline_last_14d: Array<{
+      date: string;
+      completed_habits: string[];
+      missed_habits: string[];
+      completion_pct: number;
+    }>;
+  };
+  gym_and_workout: {
+    weekly_training_split: Array<{
+      day_of_week: number;
+      day_name: string;
+      workout_name: string;
+      muscle_group: string;
+      is_rest_day: boolean;
+      exercises: Array<{
+        name: string;
+        target_muscle: string;
+        target_sets: number;
+        target_reps: number;
+        target_weight_kg: number;
+        notes?: string;
+      }>;
+    }>;
+    metrics_7d: {
+      workouts_logged_7d: number;
+      total_volume_kg_7d: number;
+      avg_workout_duration_mins: number;
+    };
+    recent_workout_sessions: Array<{
+      id: string;
+      date: string;
+      workout_name: string;
+      duration_minutes: number;
+      total_volume_kg: number;
+      exercises_performed: Array<{
+        exercise_name: string;
+        target_muscle: string;
+        completed_sets: Array<{
+          set_number: number;
+          weight_kg: number;
+          reps: number;
+          completed: boolean;
+        }>;
+      }>;
+    }>;
+  };
+  nutrition: {
+    daily_targets: {
+      calories: number;
+      protein_g: number;
+      carbs_g: number;
+      fats_g: number;
+    } | null;
+    today_summary: {
+      date: string;
+      total_calories: number;
+      total_protein_g: number;
+      total_carbs_g: number;
+      total_fats_g: number;
+      calorie_adherence_pct: number;
+      protein_adherence_pct: number;
+      logged_meals_count: number;
+      logged_meals: Array<{
+        id: string;
+        time?: string;
+        meal_type: string;
+        food_name: string;
+        amount?: number;
+        unit?: string;
+        calories: number;
+        protein_g: number;
+        carbs_g: number;
+        fats_g: number;
+        food_items?: Array<{
+          name: string;
+          amount: number;
+          unit: string;
+          calories: number;
+          protein: number;
+          carbs: number;
+          fat: number;
+        }>;
+        estimation_note?: string;
+      }>;
+    };
+    weekly_averages_7d: {
+      avg_daily_calories: number;
+      avg_daily_protein_g: number;
+      avg_daily_carbs_g: number;
+      avg_daily_fats_g: number;
+      total_meals_logged_7d: number;
+    };
+    recent_meal_history: Array<{
+      date: string;
+      time?: string;
+      meal_type: string;
+      food_name: string;
+      calories: number;
+      protein_g: number;
+      carbs_g: number;
+      fats_g: number;
+    }>;
+  };
+  body_progress_and_goals: {
+    latest_weight_kg: number | null;
+    weight_change_30d_kg: number | null;
+    weight_history: Array<{
+      date: string;
+      weight_kg?: number;
+      body_fat_pct?: number;
+    }>;
+    latest_measurements: {
+      waist?: number;
+      chest?: number;
+      arms?: number;
+      body_fat?: number;
+    } | null;
+    active_goals: Array<{
+      id: string;
+      title: string;
+      category: string;
+      target_value: number;
+      current_value: number;
+      unit: string;
+      progress_pct: number;
+      deadline?: string;
+      status: string;
+    }>;
+  };
+}

@@ -7,22 +7,33 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "tsx server/src/index.ts",
+    "server:dev": "tsx watch server/src/index.ts",
+    "test:mcp": "tsx server/test/mcp.test.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
     "firebase": "^12.19.0",
+    "firebase-admin": "^14.5.0",
     "lucide-react": "^1.44.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.13.4",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
@@ -31,6 +42,7 @@
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

@@ -96,7 +96,16 @@ export const firestoreService = {
     }
   },
 
-  async addHabit(uid: string, habit: Omit<Habit, 'id' | 'created_at' | 'archived'>): Promise<Habit> {
+  async saveHabit(uid: string, habit: Habit): Promise<Habit> {
+    const docRef = doc(firestoreDb, 'users', uid, 'habits', habit.id);
+    await setDoc(docRef, habit, { merge: true });
+    return habit;
+  },
+
+  async addHabit(uid: string, habit: Habit | Omit<Habit, 'id' | 'created_at' | 'archived'>): Promise<Habit> {
+    if ('id' in habit && habit.id) {
+      return this.saveHabit(uid, habit as Habit);
+    }
     const colRef = this.getUserCol(uid, 'habits');
     const docData = {
       ...habit,
@@ -150,6 +159,17 @@ export const firestoreService = {
     }
   },
 
+  async clearAllCompletions(uid: string): Promise<void> {
+    try {
+      const snap = await getDocs(this.getUserCol(uid, 'habitCompletions'));
+      for (const d of snap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('clearAllCompletions error:', err);
+    }
+  },
+
   // Workout Plans
   async getWorkoutPlans(uid: string): Promise<WorkoutPlan[]> {
     try {
@@ -167,33 +187,58 @@ export const firestoreService = {
     dayOfWeek: number,
     workoutName: string,
     muscleGroup: string,
-    exercises: WorkoutPlan['exercises']
+    exercises: WorkoutPlan['exercises'],
+    planId?: string
   ): Promise<WorkoutPlan> {
     const colRef = this.getUserCol(uid, 'workoutPlans');
-    const q = query(colRef, where('day_of_week', '==', dayOfWeek));
-    const snap = await withTimeout(getDocs(q), null as any);
-
+    const docId = planId || `wp_${uid}_day_${dayOfWeek}`;
     const planData = {
+      id: docId,
       user_id: uid,
       day_of_week: dayOfWeek,
       workout_name: workoutName,
       muscle_group: muscleGroup,
       exercises,
+      created_at: new Date().toISOString(),
     };
 
-    if (snap && !snap.empty) {
-      const existingDoc = snap.docs[0];
-      await updateDoc(doc(firestoreDb, 'users', uid, 'workoutPlans', existingDoc.id), planData);
-      return { id: existingDoc.id, created_at: existingDoc.data().created_at, ...planData } as WorkoutPlan;
-    } else {
-      const fullData = { ...planData, created_at: new Date().toISOString() };
-      const ref = await addDoc(colRef, fullData);
-      return { id: ref.id, ...fullData } as WorkoutPlan;
+    const docRef = doc(firestoreDb, 'users', uid, 'workoutPlans', docId);
+    await setDoc(docRef, planData, { merge: true }).catch(() => {});
+
+    // Clean up any other conflicting documents for this day_of_week
+    try {
+      const q = query(colRef, where('day_of_week', '==', dayOfWeek));
+      const snap = await withTimeout(getDocs(q), null as any);
+      if (snap && snap.docs) {
+        for (const d of snap.docs) {
+          if (d.id !== docId) {
+            deleteDoc(d.ref).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore background cleanup errors
     }
+
+    return planData as WorkoutPlan;
   },
 
-  async deleteWorkoutPlan(uid: string, planId: string): Promise<void> {
-    await deleteDoc(doc(firestoreDb, 'users', uid, 'workoutPlans', planId));
+  async deleteWorkoutPlan(uid: string, planId: string, dayOfWeek?: number): Promise<void> {
+    try {
+      await deleteDoc(doc(firestoreDb, 'users', uid, 'workoutPlans', planId)).catch(() => {});
+      if (dayOfWeek !== undefined) {
+        const colRef = this.getUserCol(uid, 'workoutPlans');
+        const q = query(colRef, where('day_of_week', '==', dayOfWeek));
+        const snap = await withTimeout(getDocs(q), null as any);
+        if (snap && snap.docs) {
+          for (const d of snap.docs) {
+            deleteDoc(d.ref).catch(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('deleteWorkoutPlan error:', err);
+    }
   },
 
   // Workout Logs

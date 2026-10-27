@@ -6,7 +6,7 @@ interface WeeklySplitViewProps {
   workoutLogs: WorkoutLog[];
   onConfigurePlan: (dayIndex: number, plan?: WorkoutPlan) => void;
   onLogWorkoutClick: (plan: WorkoutPlan) => void;
-  onDeletePlan: (planId: string) => Promise<void>;
+  onDeletePlan: (planId: string, dayOfWeek: number) => Promise<void>;
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -77,7 +77,7 @@ export const WeeklySplitView: React.FC<WeeklySplitViewProps> = ({
 
                   {plan && (
                     <button
-                      onClick={() => onDeletePlan(plan.id)}
+                      onClick={() => onDeletePlan(plan.id, dayIndex)}
                       className="text-on-surface-variant hover:text-error p-1"
                       title="Delete Plan"
                     >

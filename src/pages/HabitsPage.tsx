@@ -8,7 +8,7 @@ import { HabitModal } from '../components/habits/HabitModal';
 import type { Habit } from '../types';
 
 export const HabitsPage: React.FC = () => {
-  const { habits, completionsMap, streak, toggleHabit, refreshData } = useData();
+  const { habits, completionsMap, streak, toggleHabit, clearAllCompletions, refreshData } = useData();
   const { currentUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -19,7 +19,7 @@ export const HabitsPage: React.FC = () => {
 
   const handleDeleteHabit = async (habitId: string) => {
     if (confirm('Are you sure you want to delete this habit and all its logged completions?')) {
-      await habitService.deleteHabit(habitId);
+      await habitService.deleteHabit(habitId, currentUser?.id);
       await refreshData();
     }
   };
@@ -42,13 +42,14 @@ export const HabitsPage: React.FC = () => {
         </button>
       </div>
 
-      {/* 21-Day Spreadsheet Matrix */}
+      {/* Spreadsheet Matrix */}
       <HabitGrid
         habits={habits}
         completionsMap={completionsMap}
         onToggleHabit={toggleHabit}
         onDeleteHabit={handleDeleteHabit}
         onAddHabitClick={() => setIsModalOpen(true)}
+        onClearAllCompletions={clearAllCompletions}
       />
 
       {/* Cadence Analytics & Density Histogram */}

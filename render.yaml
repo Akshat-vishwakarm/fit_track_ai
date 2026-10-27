@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: fittrack-ai-mcp-server
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FIREBASE_PROJECT_ID
+        value: fittracker-2e209
+      - key: FIREBASE_API_KEY
+        value: AIzaSyDvVKAYL3ZAE3W10dKT4DD8J9pHKtVG8zc
+      - key: FIREBASE_AUTH_DOMAIN
+        value: fittracker-2e209.firebaseapp.com
+      - key: FITTRACK_API_KEY_SECRET
+        generateValue: true
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+    healthCheckPath: /health

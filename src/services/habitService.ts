@@ -1,6 +1,7 @@
 import { db } from '../db/database';
 import { firestoreService } from './firestoreService';
 import type { Habit, HabitCompletion } from '../types';
+import { formatLocalDate } from '../utils/dateUtils';
 
 export const habitService = {
   async getHabits(userId: string): Promise<Habit[]> {
@@ -35,9 +36,9 @@ export const habitService = {
     };
     await db.habits.put(newHabit).catch(() => {});
 
-    // Non-blocking Firestore background sync
-    firestoreService.addHabit(habit.user_id, habit).catch((err) => {
-      console.warn('Background addHabit error:', err);
+    // Non-blocking Firestore background sync with exact matching ID
+    firestoreService.saveHabit(habit.user_id, newHabit).catch((err) => {
+      console.warn('Background saveHabit error:', err);
     });
 
     return newHabit;
@@ -80,6 +81,13 @@ export const habitService = {
 
     firestoreService.toggleCompletion(userId, habitId, dateStr).catch(() => {});
     return newStatus;
+  },
+
+  async clearAllCompletions(userId: string): Promise<void> {
+    await db.habitCompletions.where('user_id').equals(userId).delete();
+    if (userId) {
+      firestoreService.clearAllCompletions(userId).catch(() => {});
+    }
   },
 
   async getCompletions(userId: string): Promise<HabitCompletion[]> {
@@ -135,30 +143,26 @@ export const habitService = {
     }
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     let currentStreak = 0;
     let bestStreak = 0;
     let tempStreak = 0;
 
     let checkDate = new Date(today);
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
-
-    const todayStr = formatDate(checkDate);
+    const todayStr = formatLocalDate(checkDate);
     const hasToday = dateSet.has(todayStr);
 
     if (!hasToday) {
       checkDate.setDate(checkDate.getDate() - 1);
-      if (!dateSet.has(formatDate(checkDate))) {
+      if (!dateSet.has(formatLocalDate(checkDate))) {
         currentStreak = 0;
       } else {
-        while (dateSet.has(formatDate(checkDate))) {
+        while (dateSet.has(formatLocalDate(checkDate))) {
           currentStreak++;
           checkDate.setDate(checkDate.getDate() - 1);
         }
       }
     } else {
-      while (dateSet.has(formatDate(checkDate))) {
+      while (dateSet.has(formatLocalDate(checkDate))) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       }

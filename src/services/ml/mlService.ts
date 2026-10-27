@@ -1,5 +1,5 @@
 import { db } from '../../db/database';
-import type { MLConfig, MLFeatureVector, MLPredictionResult } from '../../types';
+import type { MLConfig, MLFeatureVector, MLPredictionResult, FullTelemetryContext } from '../../types';
 import { predictionService } from './predictionService';
 import { RemoteModelAdapter, DisconnectedModelAdapter, type ModelAdapter } from './modelAdapter';
 
@@ -36,6 +36,17 @@ export const mlService = {
     return await predictionService.buildFeatureVector(userId);
   },
 
+  async extractFullTelemetry(
+    userId: string,
+    userProfile?: { name?: string; email?: string }
+  ): Promise<FullTelemetryContext> {
+    return await predictionService.buildFullTelemetry(userId, userProfile);
+  },
+
+  buildLLMPrompt(telemetry: FullTelemetryContext): string {
+    return predictionService.buildLLMPrompt(telemetry);
+  },
+
   async getInsights(userId: string): Promise<MLPredictionResult> {
     const config = await this.getMLConfig(userId);
     const featureVector = await this.extractFeatureVector(userId);
@@ -47,3 +58,4 @@ export const mlService = {
     return await this.privateAdapter.predict(featureVector, config);
   },
 };
+

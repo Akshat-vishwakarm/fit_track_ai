@@ -54,18 +54,26 @@ export const workoutService = {
       await db.workoutPlans.add(plan);
     }
 
-    // Background non-blocking sync to Firestore
-    firestoreService.saveWorkoutPlan(userId, dayOfWeek, workoutName, muscleGroup, exercises).catch((err) => {
+    // Background non-blocking sync to Firestore with explicit plan.id
+    firestoreService.saveWorkoutPlan(userId, dayOfWeek, workoutName, muscleGroup, exercises, plan.id).catch((err) => {
       console.warn('Background saveWorkoutPlan error:', err);
     });
 
     return plan;
   },
 
-  async deleteWorkoutPlan(id: string, userId?: string): Promise<void> {
+  async deleteWorkoutPlan(id: string, userId?: string, dayOfWeek?: number): Promise<void> {
     await db.workoutPlans.delete(id);
+    if (userId && dayOfWeek !== undefined) {
+      const duplicates = await db.workoutPlans
+        .where({ user_id: userId, day_of_week: dayOfWeek })
+        .toArray();
+      for (const d of duplicates) {
+        await db.workoutPlans.delete(d.id);
+      }
+    }
     if (userId) {
-      firestoreService.deleteWorkoutPlan(userId, id).catch(() => {});
+      await firestoreService.deleteWorkoutPlan(userId, id, dayOfWeek);
     }
   },
 

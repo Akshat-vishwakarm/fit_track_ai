@@ -41,9 +41,9 @@ export const WorkoutPage: React.FC = () => {
     await refreshData();
   };
 
-  const handleDeletePlan = async (planId: string) => {
+  const handleDeletePlan = async (planId: string, dayOfWeek: number) => {
     if (confirm('Delete this workout plan from your split?')) {
-      await workoutService.deleteWorkoutPlan(planId);
+      await workoutService.deleteWorkoutPlan(planId, currentUser?.id, dayOfWeek);
       await refreshData();
     }
   };

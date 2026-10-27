@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import type { Habit, HabitCategory } from '../../types';
+import { formatLocalDate } from '../../utils/dateUtils';
 
 interface HabitModalProps {
   isOpen: boolean;
@@ -44,17 +45,36 @@ export const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSave,
     e.preventDefault();
     if (!name.trim()) return;
 
-    await onSave({
-      user_id: userId,
-      name: name.trim(),
-      icon,
-      category,
-      frequency: 'daily',
-      goal_target: Number(goalTarget) || 1,
-      unit: unit.trim() || 'times',
-      color,
-      start_date: new Date().toISOString().split('T')[0],
-    });
+    const trimmedName = name.trim();
+    const target = Number(goalTarget) || 1;
+
+    if (target > 1) {
+      for (let i = 1; i <= target; i++) {
+        await onSave({
+          user_id: userId,
+          name: `${trimmedName} ${i}`,
+          icon,
+          category,
+          frequency: 'daily',
+          goal_target: 1,
+          unit: unit.trim() || 'times',
+          color,
+          start_date: formatLocalDate(),
+        });
+      }
+    } else {
+      await onSave({
+        user_id: userId,
+        name: trimmedName,
+        icon,
+        category,
+        frequency: 'daily',
+        goal_target: 1,
+        unit: unit.trim() || 'times',
+        color,
+        start_date: formatLocalDate(),
+      });
+    }
 
     setName('');
     setGoalTarget(1);
@@ -123,6 +143,16 @@ export const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSave,
             />
           </div>
         </div>
+
+        {goalTarget > 1 && (
+          <div className="text-[11px] text-primary-container font-heading font-semibold flex items-center gap-1.5 bg-primary-container/10 px-3 py-2 rounded-xl border border-primary-container/20">
+            <span className="material-symbols-outlined text-[16px]">splitscreen</span>
+            <span>
+              Creates {goalTarget} separate rows: &quot;{name.trim() || 'gym'} 1&quot;, &quot;{name.trim() || 'gym'} 2&quot;
+              {goalTarget > 2 ? `, ... &quot;${name.trim() || 'gym'} ${goalTarget}&quot;` : ''}
+            </span>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-on-surface-variant mb-2">

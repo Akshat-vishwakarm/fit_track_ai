@@ -2,6 +2,7 @@ import React from 'react';
 import { useData } from '../context/DataContext';
 import { StatCard } from '../components/common/StatCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { formatLocalDate } from '../utils/dateUtils';
 
 interface DashboardPageProps {
   setActiveTab: (tab: string) => void;
@@ -20,7 +21,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ setActiveTab }) =>
     mlConfig,
   } = useData();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatLocalDate();
   const activeHabitsCount = habits.length;
 
   // Calculate today's completed habits count

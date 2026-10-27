@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Habit } from '../../types';
+import { formatLocalDate } from '../../utils/dateUtils';
 
 interface HabitAnalyticsProps {
   habits: Habit[];
@@ -21,7 +22,7 @@ export const HabitAnalytics: React.FC<HabitAnalyticsProps> = ({ habits, completi
   for (let i = 20; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(d);
     let dayCompletedCount = 0;
 
     habits.forEach((h) => {

@@ -17,6 +17,7 @@ import { nutritionService } from '../services/nutritionService';
 import { progressService } from '../services/progressService';
 import { goalService } from '../services/goalService';
 import { mlService } from '../services/ml/mlService';
+import { formatLocalDate } from '../utils/dateUtils';
 
 interface DataContextType {
   loading: boolean;
@@ -36,6 +37,7 @@ interface DataContextType {
   mlPrediction: MLPredictionResult | null;
   refreshData: () => Promise<void>;
   toggleHabit: (habitId: string, dateStr: string) => Promise<boolean>;
+  clearAllCompletions: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -87,7 +89,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const userId = currentUser.id;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatLocalDate();
+
+    // Auto-clean past completions once so all checkboxes start empty as requested
+    const hasCleaned = localStorage.getItem('fittrack_completions_cleaned_v1');
+    if (!hasCleaned) {
+      localStorage.setItem('fittrack_completions_cleaned_v1', 'true');
+      await habitService.clearAllCompletions(userId);
+    }
 
     try {
       const [
@@ -120,7 +129,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mlService.getInsights(userId),
       ]);
 
-      setHabits(fetchedHabits);
+      // Auto-split any habit with goal_target > 1 into separate numbered rows (e.g. "gym 1", "gym 2")
+      let activeHabits = fetchedHabits;
+      const multiHabits = fetchedHabits.filter((h) => h.goal_target > 1);
+      if (multiHabits.length > 0) {
+        for (const mh of multiHabits) {
+          await habitService.deleteHabit(mh.id, userId);
+          for (let i = 1; i <= mh.goal_target; i++) {
+            await habitService.createHabit({
+              user_id: userId,
+              name: `${mh.name} ${i}`,
+              icon: mh.icon,
+              category: mh.category,
+              frequency: mh.frequency,
+              goal_target: 1,
+              unit: mh.unit,
+              color: mh.color,
+              start_date: mh.start_date,
+            });
+          }
+        }
+        activeHabits = await habitService.getHabits(userId);
+      }
+
+      setHabits(activeHabits);
       setCompletionsMap(fetchedCompletionsMap);
       setStreak(fetchedStreak);
       setWorkoutPlans(fetchedPlans);
@@ -152,6 +184,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return newStatus;
   };
 
+  const clearAllCompletions = async (): Promise<void> => {
+    if (!currentUser) return;
+    await habitService.clearAllCompletions(currentUser.id);
+    await refreshData();
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -172,6 +210,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mlPrediction,
         refreshData,
         toggleHabit,
+        clearAllCompletions,
       }}
     >
       {children}
