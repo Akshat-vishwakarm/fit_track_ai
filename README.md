@@ -1,4 +1,4 @@
-# 🏃 Radioactive — Minimalist Fitness OS
+# 🏃 Radioactive — Minimalist Fitness OS  Demo:https://fit-track-ai-lilac.vercel.app/
 
 > **Intelligent Personal Fitness & Telemetry Management** — Track habits, progressive overload, macronutrients, and body metrics with AI precision, an authenticated Personal API Token system, and a Model Context Protocol (MCP) agent bridge.
 
