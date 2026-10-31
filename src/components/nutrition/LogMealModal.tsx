@@ -9,15 +9,16 @@ interface LogMealModalProps {
   onClose: () => void;
   onSaveMeal: (meal: Omit<MealEntry, 'id' | 'created_at'>) => Promise<void>;
   userId: string;
+  initialMeal?: MealEntry | null;
   editingMeal?: MealEntry | null;
 }
 
 const MEAL_TYPES: { label: string; value: MealType }[] = [
-  { label: 'Breakfast', value: 'breakfast' },
-  { label: 'Lunch', value: 'lunch' },
-  { label: 'Dinner', value: 'dinner' },
-  { label: 'Snack', value: 'snack' },
-  { label: 'Other', value: 'other' },
+  { label: 'BREAKFAST', value: 'breakfast' },
+  { label: 'LUNCH', value: 'lunch' },
+  { label: 'DINNER', value: 'dinner' },
+  { label: 'SNACK', value: 'snack' },
+  { label: 'OTHER', value: 'other' },
 ];
 
 const UNITS = ['g', 'oz', 'servings', 'pieces', 'ml'];
@@ -27,10 +28,11 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
   onClose,
   onSaveMeal,
   userId,
+  initialMeal,
   editingMeal,
 }) => {
-  // Step flow: 'input' | 'analyzing' | 'confirm' | 'error'
-  const [step, setStep] = useState<'input' | 'analyzing' | 'confirm' | 'error'>('input');
+  const currentEditing = initialMeal !== undefined ? initialMeal : editingMeal;
+  const [step, setStep] = useState<'input' | 'analyzing' | 'confirm'>('input');
 
   const [mealType, setMealType] = useState<MealType>('breakfast');
   const [foodDescription, setFoodDescription] = useState('');
@@ -38,15 +40,24 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
   const [unit, setUnit] = useState<string>('g');
 
   const [analysisResult, setAnalysisResult] = useState<NutritionAnalysisResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (editingMeal) {
-      setMealType(editingMeal.meal_type || 'breakfast');
-      setFoodDescription(editingMeal.food_name || '');
-      setAmount(editingMeal.amount ? String(editingMeal.amount) : '200');
-      setUnit(editingMeal.unit || 'g');
-      setStep('input');
+    if (currentEditing) {
+      setMealType(currentEditing.meal_type || 'breakfast');
+      setFoodDescription(currentEditing.food_name || '');
+      setAmount(currentEditing.amount ? String(currentEditing.amount) : '200');
+      setUnit(currentEditing.unit || 'g');
+      setAnalysisResult({
+        mealType: currentEditing.meal_type || 'breakfast',
+        originalDescription: currentEditing.food_name || '',
+        foodItems: [],
+        totalCalories: currentEditing.calories || 0,
+        totalProtein: currentEditing.protein || 0,
+        totalCarbs: currentEditing.carbs || 0,
+        totalFat: currentEditing.fats || 0,
+        estimationNote: currentEditing.estimation_note || 'Manual entry',
+      });
+      setStep('confirm');
     } else if (isOpen) {
       setStep('input');
       setMealType('breakfast');
@@ -54,21 +65,17 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
       setAmount('200');
       setUnit('g');
       setAnalysisResult(null);
-      setErrorMessage('');
     }
-  }, [editingMeal, isOpen]);
+  }, [currentEditing, isOpen]);
 
   const handleAnalyze = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!foodDescription.trim()) return;
 
     setStep('analyzing');
-    setErrorMessage('');
 
     try {
       const numAmount = amount.trim() ? Number(amount) : undefined;
-
-      // 2.5-second hard timeout race to ensure user never gets stuck loading
       const apiPromise = geminiNutritionService.analyzeNutrition({
         mealType,
         foodDescription: foodDescription.trim(),
@@ -79,15 +86,13 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
       const timeoutPromise = new Promise<NutritionAnalysisResult>((resolve) => {
         setTimeout(() => {
           resolve(geminiNutritionService.fallbackAnalysis(mealType, foodDescription.trim(), numAmount, unit));
-        }, 2500);
+        }, 2000);
       });
 
       const result = await Promise.race([apiPromise, timeoutPromise]);
-
       setAnalysisResult(result);
       setStep('confirm');
-    } catch (err: any) {
-      console.warn('API error, using instant calculated fallback:', err);
+    } catch {
       const numAmount = amount.trim() ? Number(amount) : undefined;
       const fallback = geminiNutritionService.fallbackAnalysis(
         mealType,
@@ -100,29 +105,28 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
     }
   };
 
-  const handleConfirmSave = async () => {
+  const handleCommit = async () => {
     if (!analysisResult) return;
 
     await onSaveMeal({
       user_id: userId,
+      meal_type: mealType,
+      food_name: foodDescription.trim() || 'Meal Item',
+      amount: Number(amount) || 200,
+      unit: unit.trim() || 'g',
+      calories: Math.round(Number(analysisResult.totalCalories) || 0),
+      protein: Math.round(Number(analysisResult.totalProtein) || 0),
+      carbs: Math.round(Number(analysisResult.totalCarbs) || 0),
+      fats: Math.round(Number(analysisResult.totalFat) || 0),
       date: new Date().toISOString().split('T')[0],
-      meal_type: analysisResult.mealType,
-      food_name: analysisResult.originalDescription,
-      amount: analysisResult.amount,
-      unit: analysisResult.unit,
-      calories: analysisResult.totalCalories,
-      protein: analysisResult.totalProtein,
-      carbs: analysisResult.totalCarbs,
-      fats: analysisResult.totalFat,
-      food_items: analysisResult.foodItems,
-      estimation_note: analysisResult.estimationNote,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     });
 
     confetti({
-      particleCount: 35,
-      spread: 60,
-      origin: { y: 0.65 },
-      colors: ['#00e599', '#00d2ff', '#dab1ff'],
+      particleCount: 40,
+      spread: 50,
+      origin: { y: 0.6 },
+      colors: ['#000000', '#555555', '#999999'],
     });
 
     onClose();
@@ -132,260 +136,211 @@ export const LogMealModal: React.FC<LogMealModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'confirm' ? 'AI Nutrition Analysis' : editingMeal ? 'Edit Logged Meal' : 'Log Meal'}
+      title={currentEditing ? 'Edit Nutrition Entry' : 'Log Nutrition Entry'}
     >
-      {/* STEP 1: INPUT FORM */}
-      {step === 'input' && (
-        <form onSubmit={handleAnalyze} className="space-y-4">
-          {/* FIELD 1: Meal Type */}
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">
-              Meal Type *
-            </label>
-            <select
-              value={mealType}
-              onChange={(e) => setMealType(e.target.value as MealType)}
-              className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container capitalize font-heading font-semibold"
-            >
-              {MEAL_TYPES.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* FIELD 2: What did you eat? */}
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">
-              What did you eat? *
-            </label>
-            <textarea
-              required
-              rows={3}
-              placeholder="e.g. 200g chicken breast + 150g cooked rice or 2 eggs and 3 chapatis"
-              value={foodDescription}
-              onChange={(e) => setFoodDescription(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container font-sans leading-relaxed"
-            />
-          </div>
-
-          {/* FIELD 3 & 4: Amount & Unit */}
-          <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-4">
+        {/* Step 1: Input Description and Tag */}
+        {step === 'input' && (
+          <form onSubmit={handleAnalyze} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">
-                Amount
+              <label className="block text-xs font-mono uppercase text-secondary mb-1.5">
+                Meal Category
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {MEAL_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setMealType(t.value)}
+                    className={`py-1.5 px-3 rounded font-mono text-xs font-medium cursor-pointer transition-colors ${
+                      mealType === t.value
+                        ? 'bg-primary text-on-primary'
+                        : 'bg-surface-container text-secondary hover:text-primary'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-secondary mb-1">
+                Food Item Description *
               </label>
               <input
-                type="number"
-                min="1"
-                step="any"
-                placeholder="200"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container font-heading font-bold"
+                type="text"
+                required
+                placeholder="e.g. Oats 100g with whey isolate protein, or 200g grilled chicken"
+                value={foodDescription}
+                onChange={(e) => setFoodDescription(e.target.value)}
+                className="w-full px-3 py-2 rounded bg-surface border border-outline text-primary text-sm focus:outline-none focus:border-primary font-mono"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">
-                Unit
-              </label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container font-heading font-semibold"
-              >
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-mono uppercase text-secondary mb-1">
+                  Portion Quantity
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full px-3 py-2 rounded bg-surface border border-outline text-primary text-sm focus:outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-secondary mb-1">
+                  Unit Measurement
+                </label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="w-full px-3 py-2 rounded bg-surface border border-outline text-primary text-sm focus:outline-none focus:border-primary font-mono"
+                >
+                  {UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-outline-variant/20">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant text-xs font-semibold hover:bg-surface-variant transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!foodDescription.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-container text-on-primary-fixed text-xs font-heading font-bold shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all"
-            >
-              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-              <span>Analyze with AI</span>
-            </button>
-          </div>
-        </form>
-      )}
+            <div className="flex justify-end gap-2 pt-3 border-t border-outline">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded border border-outline text-secondary hover:text-primary transition-colors text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-[#222222] transition-colors text-xs font-medium flex items-center gap-1.5"
+              >
+                <span>Analyze &amp; Calculate</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
+            </div>
+          </form>
+        )}
 
-      {/* STEP 2: ANALYZING LOADING STATE */}
-      {step === 'analyzing' && (
-        <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="relative w-16 h-16 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-4 border-primary-container/20 border-t-primary-container animate-spin" />
-            <span className="material-symbols-outlined text-primary-container text-[28px]">
-              auto_awesome
-            </span>
-          </div>
-          <div>
-            <h4 className="font-heading font-bold text-base text-on-surface">Analyzing your meal...</h4>
-            <p className="text-xs text-on-surface-variant mt-1">
-              Calculating calories, protein, carbs, and fat breakdown.
+        {/* Step 2: Analyzing State */}
+        {step === 'analyzing' && (
+          <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="font-mono text-xs text-primary font-medium">
+              Analyzing Macronutrient Telemetry...
+            </div>
+            <p className="text-xs text-secondary">
+              Calculating calories, protein, carbs, and fats profile
             </p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* STEP 3: AI CONFIRMATION CARD */}
-      {step === 'confirm' && analysisResult && (
-        <div className="space-y-5">
-          {/* Ambiguity Warning Banner if present */}
-          {analysisResult.isAmbiguous && analysisResult.clarificationQuestion && (
-            <div className="bg-flame/15 border border-flame/40 p-3 rounded-xl flex items-start gap-2.5 text-xs text-flame">
-              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">help</span>
-              <div>
-                <span className="font-bold font-heading uppercase block mb-0.5">Note on Ambiguity</span>
-                <span>{analysisResult.clarificationQuestion}</span>
+        {/* Step 3: Confirm and Commit */}
+        {step === 'confirm' && analysisResult && (
+          <div className="space-y-4">
+            <div className="bg-surface p-3.5 rounded border border-outline space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-heading font-semibold text-sm text-primary">
+                  {foodDescription || 'Meal Summary'}
+                </span>
+                <span className="font-mono text-xs uppercase px-2 py-0.5 rounded bg-surface-container-highest text-primary">
+                  {mealType}
+                </span>
+              </div>
+              <div className="font-mono text-xs text-secondary">
+                Amount: {amount} {unit}
               </div>
             </div>
-          )}
 
-          {/* Meal Overview Header */}
-          <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10 flex items-center justify-between">
-            <div>
-              <span className="px-2 py-0.5 rounded text-[10px] font-heading font-bold uppercase bg-surface-container-high text-primary-container">
-                {analysisResult.mealType}
-              </span>
-              <h4 className="font-heading font-bold text-sm text-on-surface mt-1">
-                {analysisResult.originalDescription}
-              </h4>
-            </div>
-            {analysisResult.amount && (
-              <span className="text-xs font-heading font-bold text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-lg">
-                {analysisResult.amount} {analysisResult.unit}
-              </span>
-            )}
-          </div>
+            {/* Editable Macro Numbers */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-surface border border-outline rounded p-2.5">
+                <label className="block text-[10px] font-mono uppercase text-secondary">
+                  Calories
+                </label>
+                <input
+                  type="number"
+                  value={analysisResult.totalCalories}
+                  onChange={(e) =>
+                    setAnalysisResult({ ...analysisResult, totalCalories: Number(e.target.value) || 0 })
+                  }
+                  className="w-full mt-1 font-heading text-lg font-semibold text-primary bg-transparent focus:outline-none"
+                />
+                <span className="text-[10px] font-mono text-secondary">kcal</span>
+              </div>
 
-          {/* Individual Food Items Cards */}
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            <div className="text-[11px] font-heading font-bold text-on-surface-variant uppercase tracking-wider">
-              Detected Food Items ({analysisResult.foodItems.length})
+              <div className="bg-surface border border-outline rounded p-2.5">
+                <label className="block text-[10px] font-mono uppercase text-secondary">
+                  Protein
+                </label>
+                <input
+                  type="number"
+                  value={analysisResult.totalProtein}
+                  onChange={(e) =>
+                    setAnalysisResult({ ...analysisResult, totalProtein: Number(e.target.value) || 0 })
+                  }
+                  className="w-full mt-1 font-heading text-lg font-semibold text-primary bg-transparent focus:outline-none"
+                />
+                <span className="text-[10px] font-mono text-secondary">grams</span>
+              </div>
+
+              <div className="bg-surface border border-outline rounded p-2.5">
+                <label className="block text-[10px] font-mono uppercase text-secondary">
+                  Carbs
+                </label>
+                <input
+                  type="number"
+                  value={analysisResult.totalCarbs}
+                  onChange={(e) =>
+                    setAnalysisResult({ ...analysisResult, totalCarbs: Number(e.target.value) || 0 })
+                  }
+                  className="w-full mt-1 font-heading text-lg font-semibold text-primary bg-transparent focus:outline-none"
+                />
+                <span className="text-[10px] font-mono text-secondary">grams</span>
+              </div>
+
+              <div className="bg-surface border border-outline rounded p-2.5">
+                <label className="block text-[10px] font-mono uppercase text-secondary">
+                  Fats
+                </label>
+                <input
+                  type="number"
+                  value={analysisResult.totalFat}
+                  onChange={(e) =>
+                    setAnalysisResult({ ...analysisResult, totalFat: Number(e.target.value) || 0 })
+                  }
+                  className="w-full mt-1 font-heading text-lg font-semibold text-primary bg-transparent focus:outline-none"
+                />
+                <span className="text-[10px] font-mono text-secondary">grams</span>
+              </div>
             </div>
-            {analysisResult.foodItems.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-surface-container-high/40 p-3 rounded-xl border border-outline-variant/20 flex items-center justify-between text-xs"
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-outline">
+              <button
+                type="button"
+                onClick={() => setStep('input')}
+                className="px-4 py-2 rounded border border-outline text-secondary hover:text-primary transition-colors text-xs font-medium"
               >
-                <div>
-                  <div className="font-heading font-bold text-on-surface">{item.name}</div>
-                  <div className="text-[10px] text-on-surface-variant">Portion: {item.amount} {item.unit}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-heading font-bold text-primary-container">{item.calories} kcal</div>
-                  <div className="text-[10px] text-on-surface-variant font-medium">
-                    P: {item.protein}g | C: {item.carbs}g | F: {item.fat}g
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* TOTAL Summary Box */}
-          <div className="bg-surface-container p-4 rounded-xl border border-primary-container/30 space-y-2 shadow-md">
-            <div className="text-xs font-heading font-bold text-on-surface uppercase tracking-wider">
-              TOTAL NUTRITION SUMMARY
-            </div>
-
-            <div className="grid grid-cols-4 gap-2 text-center pt-1">
-              <div className="bg-surface-container-high p-2 rounded-lg border border-outline-variant/10">
-                <div className="text-[10px] text-on-surface-variant font-heading uppercase">Calories</div>
-                <div className="font-heading font-extrabold text-sm text-primary-container">
-                  {analysisResult.totalCalories} kcal
-                </div>
-              </div>
-              <div className="bg-surface-container-high p-2 rounded-lg border border-outline-variant/10">
-                <div className="text-[10px] text-on-surface-variant font-heading uppercase">Protein</div>
-                <div className="font-heading font-extrabold text-sm text-secondary">
-                  {analysisResult.totalProtein}g
-                </div>
-              </div>
-              <div className="bg-surface-container-high p-2 rounded-lg border border-outline-variant/10">
-                <div className="text-[10px] text-on-surface-variant font-heading uppercase">Carbs</div>
-                <div className="font-heading font-extrabold text-sm text-primary-container">
-                  {analysisResult.totalCarbs}g
-                </div>
-              </div>
-              <div className="bg-surface-container-high p-2 rounded-lg border border-outline-variant/10">
-                <div className="text-[10px] text-on-surface-variant font-heading uppercase">Fat</div>
-                <div className="font-heading font-extrabold text-sm text-tertiary-container">
-                  {analysisResult.totalFat}g
-                </div>
-              </div>
+                Back to Edit
+              </button>
+              <button
+                type="button"
+                onClick={handleCommit}
+                className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-[#222222] transition-colors text-xs font-medium"
+              >
+                Commit Entry
+              </button>
             </div>
           </div>
-
-          {/* Estimation Note Disclaimer */}
-          <div className="text-[11px] text-on-surface-variant/80 italic bg-surface-container-high/30 p-2.5 rounded-lg border border-outline-variant/10">
-            ℹ️ {analysisResult.estimationNote}
-          </div>
-
-          {/* Action Buttons: [ Edit ] and [ Save Meal ] */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant/20">
-            <button
-              type="button"
-              onClick={() => setStep('input')}
-              className="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface text-xs font-heading font-bold transition-colors"
-            >
-              Edit Inputs
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmSave}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-secondary-container text-on-secondary-fixed text-xs font-heading font-bold shadow-[0_0_12px_rgba(0,229,153,0.3)] hover:scale-105 transition-transform"
-            >
-              <span className="material-symbols-outlined text-[16px]">check</span>
-              <span>Save Meal</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 4: ERROR STATE */}
-      {step === 'error' && (
-        <div className="py-6 text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-error-container/30 text-error flex items-center justify-center mx-auto">
-            <span className="material-symbols-outlined text-[28px]">warning</span>
-          </div>
-          <div>
-            <h4 className="font-heading font-bold text-sm text-on-surface">Unable to analyze this meal right now</h4>
-            <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">{errorMessage}</p>
-          </div>
-          <div className="flex justify-center gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setStep('input')}
-              className="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant text-xs font-semibold"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAnalyze()}
-              className="px-5 py-2 rounded-xl bg-primary-container text-on-primary-fixed text-xs font-bold shadow-[0_0_12px_rgba(0,210,255,0.3)]"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </Modal>
   );
 };

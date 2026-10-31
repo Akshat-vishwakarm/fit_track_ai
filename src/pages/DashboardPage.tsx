@@ -1,7 +1,7 @@
 import React from 'react';
 import { useData } from '../context/DataContext';
 import { StatCard } from '../components/common/StatCard';
-import { EmptyState } from '../components/common/EmptyState';
+import { FocusDeadlineTimer } from '../components/focus/FocusDeadlineTimer';
 import { formatLocalDate } from '../utils/dateUtils';
 
 interface DashboardPageProps {
@@ -12,13 +12,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ setActiveTab }) =>
   const {
     habits,
     completionsMap,
+    toggleHabit,
     streak,
     workoutPlans,
     nutritionGoal,
     todayConsumed,
     latestWeight,
-    goals,
-    mlConfig,
   } = useData();
 
   const todayStr = formatLocalDate();
@@ -36,246 +35,204 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ setActiveTab }) =>
   const targetCalories = nutritionGoal?.calories || 0;
   const calPct = targetCalories > 0 ? Math.min(100, Math.round((todayConsumed.calories / targetCalories) * 100)) : 0;
 
-  // Today's scheduled workout plan
-  const dayIndexToday = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1; // 0 = Mon ... 6 = Sun
+  // Today's scheduled workout plan (0 = Mon ... 6 = Sun)
+  const dayIndexToday = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const todaysWorkoutPlan = workoutPlans.find((p) => p.day_of_week === dayIndexToday);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Welcome Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">Fitness Command Center</h1>
-          <p className="text-xs text-on-surface-variant">Dynamic summary of your persisted activities</p>
-        </div>
-      </div>
-
-      {/* KPI Quad Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="space-y-6">
+      {/* KPI Metric Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Streak */}
         <StatCard
-          title="Current Streak"
+          title="Streak"
           value={`${streak.currentStreak} Days`}
-          subtext={`Best: ${streak.bestStreak}D`}
+          subtext={`Best record: ${streak.bestStreak}D`}
           icon="local_fire_department"
-          colorClass="text-flame"
           progressPct={streak.bestStreak > 0 ? (streak.currentStreak / streak.bestStreak) * 100 : 0}
         />
+
+        {/* Card 2: Habit Completion */}
         <StatCard
-          title="Today's Habits"
+          title="Habit Completion"
           value={`${todayCompletedHabits} / ${activeHabitsCount}`}
-          subtext={`${habitsRatioPct}% Done`}
+          subtext={`${habitsRatioPct}% completed today`}
           icon="check_circle"
-          colorClass="text-primary-container"
           progressPct={habitsRatioPct}
         />
+
+        {/* Card 3: Caloric Intake */}
         <StatCard
-          title="Calories Logged"
+          title="Caloric Intake"
           value={`${todayConsumed.calories} kcal`}
-          subtext={targetCalories > 0 ? `Target: ${targetCalories}` : 'No target set'}
+          subtext={targetCalories > 0 ? `Target: ${targetCalories} kcal` : 'No daily target set'}
           icon="restaurant"
-          colorClass="text-secondary"
           progressPct={calPct}
         />
+
+        {/* Card 4: Current Weight */}
         <StatCard
-          title="Body Weight"
-          value={latestWeight ? `${latestWeight} kg` : '0 Logged'}
-          subtext={latestWeight ? 'Latest Record' : 'No logs yet'}
-          icon="monitoring"
-          colorClass="text-tertiary-container"
+          title="Current Weight"
+          value={latestWeight ? `${latestWeight} kg` : '0 kg'}
+          subtext={latestWeight ? 'Latest entry logged' : 'No weight entry logged'}
+          icon="fitness_center"
         />
       </div>
 
-      {/* Main Grid: Today's Focus & Modules */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Habits & Workout */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Today's Habits Summary Card */}
-          <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary-container text-[20px]">check_box</span>
-                <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Today's Habits ({todayCompletedHabits}/{activeHabitsCount})
-                </span>
-              </div>
-              <button
-                onClick={() => setActiveTab('habits')}
-                className="text-xs text-primary-container font-heading font-bold hover:underline"
-              >
-                Open Matrix →
-              </button>
+      {/* High-Focus Target Countdown Section */}
+      <FocusDeadlineTimer />
+
+      {/* Bottom Functional Grid (Habits & Calendar/Training) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Habits Matrix (7 Cols) */}
+        <div className="lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-primary">task_alt</span>
+              <h3 className="font-heading text-base text-primary font-semibold">Today&apos;s Habits</h3>
+              <span className="font-mono text-xs text-secondary bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
+                {todayCompletedHabits}/{activeHabitsCount}
+              </span>
             </div>
 
-            {activeHabitsCount === 0 ? (
-              <EmptyState
-                icon="event_repeat"
-                title="No habits created"
-                description="Create your daily habits to start tracking your routine consistency."
-                actionLabel="Add Habit"
-                onAction={() => setActiveTab('habits')}
-              />
-            ) : (
-              <div className="divide-y divide-outline-variant/10">
-                {habits.map((habit) => {
-                  const isChecked = !!(completionsMap[habit.id] && completionsMap[habit.id][todayStr]);
-                  return (
-                    <div key={habit.id} className="py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${habit.color}20`, color: habit.color }}
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            {habit.icon || 'check_circle'}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-heading text-xs font-bold text-on-surface">{habit.name}</div>
-                          <div className="text-[10px] text-on-surface-variant capitalize">{habit.category}</div>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-heading font-bold ${
-                          isChecked
-                            ? 'bg-secondary-container/20 text-secondary'
-                            : 'bg-surface-container-high text-on-surface-variant'
-                        }`}
-                      >
-                        {isChecked ? 'Completed ✓' : 'Pending'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <button
+              onClick={() => setActiveTab('habits')}
+              className="text-xs text-primary hover:text-secondary flex items-center gap-1 font-medium transition-colors"
+            >
+              <span>Open Matrix</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </button>
           </div>
 
-          {/* Today's Workout Summary Card */}
-          <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-4 shadow-lg">
+          {/* Habit Checklist */}
+          {activeHabitsCount === 0 ? (
+            <div className="py-8 text-center border border-outline-variant rounded flex flex-col items-center justify-center p-4">
+              <span className="material-symbols-outlined text-secondary text-[28px] mb-2">check_circle</span>
+              <div className="text-sm font-medium text-primary">No habits created yet</div>
+              <p className="text-xs text-secondary mt-0.5">Start daily streaks for hydration, reading, training or meditation.</p>
+              <button
+                onClick={() => setActiveTab('habits')}
+                className="mt-3 px-3 py-1.5 bg-primary text-on-primary text-xs font-medium rounded hover:bg-neutral-800 transition-colors"
+              >
+                + Add First Habit
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col border border-outline-variant rounded divide-y divide-outline-variant">
+              {habits.map((habit) => {
+                const isChecked = !!(completionsMap[habit.id] && completionsMap[habit.id][todayStr]);
+                return (
+                  <div
+                    key={habit.id}
+                    className="flex items-center justify-between p-3 hover:bg-surface-container-low transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleHabit(habit.id, todayStr)}
+                        className={`w-5 h-5 rounded-sm border border-outline flex items-center justify-center transition-colors cursor-pointer ${
+                          isChecked ? 'bg-primary text-on-primary border-primary' : 'bg-surface-container-lowest hover:border-primary'
+                        }`}
+                      >
+                        {isChecked && (
+                          <span className="material-symbols-outlined text-[14px] leading-none">check</span>
+                        )}
+                      </button>
+
+                      <div className="flex flex-col">
+                        <span className="text-sm text-primary font-medium leading-none">{habit.name}</span>
+                        <span className="text-[11px] text-secondary mt-1 leading-none capitalize">
+                          {habit.category} • {habit.frequency || 'daily'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded border border-outline-variant font-mono text-[11px] ${
+                          isChecked
+                            ? 'bg-surface-container-highest text-primary font-medium'
+                            : 'bg-surface-container text-secondary'
+                        }`}
+                      >
+                        {isChecked ? 'Completed' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Autologger Bar */}
+          <div className="flex items-center justify-between pt-1 text-secondary">
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <span className="material-symbols-outlined text-[14px]">tune</span>
+              <span>Persistent Dexie + Cloud sync active</span>
+            </div>
+            <button
+              onClick={() => setActiveTab('habits')}
+              className="h-7 px-2.5 border border-outline-variant rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-primary transition-colors text-xs flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[14px]">add</span>
+              <span>New Habit</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Calendar & Scheduled Protocols (5 Cols) */}
+        <div className="lg:col-span-5 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-primary">edit_calendar</span>
+              <h3 className="font-heading text-base text-primary font-semibold">Calendar &amp; Notes</h3>
+            </div>
+            <span className="font-mono text-xs text-secondary">TODAY</span>
+          </div>
+
+          <div className="bg-surface-container-low border border-outline-variant rounded p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-[20px]">fitness_center</span>
-                <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Today's Training Schedule
+              <span className="text-[11px] uppercase tracking-wider text-secondary font-medium">
+                Daily Athletic Journal
+              </span>
+              <span className="font-mono text-xs text-secondary">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            <p className="text-xs text-secondary italic leading-relaxed">
+              &ldquo;Log daily metric notes (e.g. &apos;weight 85 run 3 km&apos;) and attach qualitative reflections to any date.&rdquo;
+            </p>
+            <div className="pt-1 flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab('calendar')}
+                className="h-8 px-3 bg-primary text-on-primary text-xs font-medium rounded border border-primary hover:bg-neutral-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">edit_note</span>
+                <span>Open Calendar &amp; Add Note</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Today's Scheduled Training Split Section */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] uppercase tracking-wider text-secondary font-medium">
+              Scheduled Protocol
+            </span>
+            <div className="border border-outline-variant rounded p-3 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-primary font-medium">TODAY</span>
+                <span className="h-3 w-px bg-outline-variant" />
+                <span className="text-xs text-primary font-medium">
+                  {todaysWorkoutPlan ? todaysWorkoutPlan.workout_name : 'Rest Day / Unconfigured'}
                 </span>
               </div>
               <button
                 onClick={() => setActiveTab('workout')}
-                className="text-xs text-secondary font-heading font-bold hover:underline"
+                className="font-mono text-xs text-secondary hover:text-primary transition-colors underline"
               >
-                View Split →
+                {todaysWorkoutPlan ? 'LOG WORKOUT' : 'SET SPLIT'}
               </button>
             </div>
-
-            {todaysWorkoutPlan ? (
-              <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/10 flex items-center justify-between">
-                <div>
-                  <div className="font-heading font-bold text-sm text-on-surface">
-                    {todaysWorkoutPlan.workout_name}
-                  </div>
-                  <div className="text-xs text-secondary font-medium">
-                    Target: {todaysWorkoutPlan.muscle_group} ({todaysWorkoutPlan.exercises?.length || 0} exercises)
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveTab('workout')}
-                  className="px-4 py-2 rounded-xl bg-secondary-container text-on-secondary-fixed font-heading font-bold text-xs shadow-[0_0_10px_rgba(0,229,153,0.3)]"
-                >
-                  Log Workout
-                </button>
-              </div>
-            ) : (
-              <EmptyState
-                icon="bed"
-                title="No workout scheduled today"
-                description="Enjoy rest day or set up your weekly training split."
-                actionLabel="Create Split"
-                onAction={() => setActiveTab('workout')}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: AI Insights Status & Goals */}
-        <div className="space-y-6">
-          {/* AI Insights Widget */}
-          <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-tertiary-container text-[20px]">smart_toy</span>
-                <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-                  AI Model Status
-                </span>
-              </div>
-              <button
-                onClick={() => setActiveTab('ai')}
-                className="text-xs text-tertiary-container font-heading font-bold hover:underline"
-              >
-                Configure →
-              </button>
-            </div>
-
-            <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/10 text-center space-y-2">
-              <div className="w-10 h-10 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center mx-auto">
-                <span className="material-symbols-outlined text-[20px]">
-                  {mlConfig?.connected ? 'smart_toy' : 'power_off'}
-                </span>
-              </div>
-              <h4 className="font-heading font-bold text-xs text-on-surface">
-                {mlConfig?.connected ? 'AI Model Connected' : 'AI Model Not Connected'}
-              </h4>
-              <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                {mlConfig?.connected
-                  ? 'Your ML endpoint is actively analyzing your fitness telemetry.'
-                  : 'Connect your ML model to unlock personalized insights.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Active Goals Overview */}
-          <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-flame text-[20px]">flag</span>
-                <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Active Goals ({goals.length})
-                </span>
-              </div>
-              <button
-                onClick={() => setActiveTab('goals')}
-                className="text-xs text-flame font-heading font-bold hover:underline"
-              >
-                Manage →
-              </button>
-            </div>
-
-            {goals.length === 0 ? (
-              <EmptyState
-                icon="flag"
-                title="No active goals"
-                description="Set target milestones for weight, habits, or workouts."
-                actionLabel="Set Goal"
-                onAction={() => setActiveTab('goals')}
-              />
-            ) : (
-              <div className="space-y-2">
-                {goals.slice(0, 3).map((g) => {
-                  const pct = g.target_value > 0 ? Math.min(100, Math.round((g.current_value / g.target_value) * 100)) : 0;
-                  return (
-                    <div key={g.id} className="bg-surface-container p-3 rounded-xl border border-outline-variant/10 space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-heading font-bold text-on-surface truncate">{g.title}</span>
-                        <span className="font-bold text-primary-container">{pct}%</span>
-                      </div>
-                      <div className="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-primary-container h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       </div>

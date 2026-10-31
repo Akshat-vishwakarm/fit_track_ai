@@ -24,19 +24,23 @@ export const ProgressPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">Body Progress & Analytics</h1>
-          <p className="text-xs text-on-surface-variant">Log weight and body measurements to plot real progress trajectory over time.</p>
+          <h1 className="font-heading text-2xl font-semibold text-primary tracking-tight">
+            Body Progress &amp; Analytics
+          </h1>
+          <p className="text-xs text-secondary mt-0.5">
+            Log weight and body measurements to plot real progress trajectories over time.
+          </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-container text-on-primary-fixed font-heading font-bold text-xs shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-105 transition-all"
+          className="h-9 px-4 bg-primary text-on-primary text-xs font-medium rounded hover:bg-neutral-800 transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Log Measurements</span>
         </button>
       </div>

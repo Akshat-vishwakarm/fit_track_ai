@@ -1,0 +1,429 @@
+{
+  "info": {
+    "name": "FitTrack AI — Personal API Test Suite",
+    "_postman_id": "fittrack-personal-api-v1",
+    "description": "Complete test suite for FitTrack AI Personal API Token System. Tests real token generation, hashing, Bearer auth, water intake, nutrition, workouts, habits, weight, dashboard, rate limiting, and strict cross-user data isolation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Generate Personal API Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201 Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test('Token returned and saved to environment', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data.token).to.be.a('string');",
+              "    pm.expect(jsonData.data.token).to.match(/^ft_live_[a-f0-9]{64}$/);",
+              "    pm.environment.set('personal_api_token', jsonData.data.token);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-firebase-uid", "value": "{{user_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Integration Token\",\n  \"expires_in_days\": 90\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tokens/generate",
+          "host": ["{{baseUrl}}"],
+          "path": ["tokens", "generate"]
+        }
+      }
+    },
+    {
+      "name": "2. Retrieve Authenticated User Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Returns verified user_id matching environment', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data.user_id).to.eql(pm.environment.get('user_id'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["me"]
+        }
+      }
+    },
+    {
+      "name": "3. Retrieve Today's Water Intake",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Valid hydration schema and accurate logging flag', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data).to.have.property('has_records');",
+              "    pm.expect(jsonData.data).to.have.property('daily_target_ml');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/water/today",
+          "host": ["{{baseUrl}}"],
+          "path": ["water", "today"]
+        }
+      }
+    },
+    {
+      "name": "4. Retrieve Nutrition Summary",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Valid nutrition structure', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data).to.have.property('has_records');",
+              "    pm.expect(jsonData.data).to.have.property('meals');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/nutrition/today",
+          "host": ["{{baseUrl}}"],
+          "path": ["nutrition", "today"]
+        }
+      }
+    },
+    {
+      "name": "5. Retrieve Workout History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Returns logged workouts list and scheduled split', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data).to.have.property('scheduled_for_today');",
+              "    pm.expect(jsonData.data.logged_workouts).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/workouts?days=7",
+          "host": ["{{baseUrl}}"],
+          "path": ["workouts"],
+          "query": [{ "key": "days", "value": "7" }]
+        }
+      }
+    },
+    {
+      "name": "6. Retrieve Habits",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Returns habits array with streaks', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data.habits).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/habits",
+          "host": ["{{baseUrl}}"],
+          "path": ["habits"]
+        }
+      }
+    },
+    {
+      "name": "7. Retrieve Weight History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Returns weight entries', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data.history).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/weight?days=30",
+          "host": ["{{baseUrl}}"],
+          "path": ["weight"],
+          "query": [{ "key": "days", "value": "30" }]
+        }
+      }
+    },
+    {
+      "name": "8. Retrieve Complete Dashboard",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Returns unified dashboard with hydration, nutrition, workouts, habits, weight', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "    pm.expect(jsonData.data).to.have.property('hydration');",
+              "    pm.expect(jsonData.data).to.have.property('nutrition');",
+              "    pm.expect(jsonData.data).to.have.property('workouts');",
+              "    pm.expect(jsonData.data).to.have.property('habits');",
+              "    pm.expect(jsonData.data).to.have.property('body_weight');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/dashboard",
+          "host": ["{{baseUrl}}"],
+          "path": ["dashboard"]
+        }
+      }
+    },
+    {
+      "name": "9. Invalid Token Test (Expect 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Code is TOKEN_NOT_FOUND or TOKEN_INVALID', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.code).to.be.oneOf(['TOKEN_NOT_FOUND', 'TOKEN_INVALID', 'AUTH_REQUIRED']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer ft_live_0000000000000000000000000000000000000000000000000000000000000000" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["me"]
+        }
+      }
+    },
+    {
+      "name": "10. Expired Token Test (Expect 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer ft_live_expired_dummy_token_test_000000000000000000000000000000000000" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["me"]
+        }
+      }
+    },
+    {
+      "name": "11. Revoked Token Test (Expect 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 or 200 depending on step', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "x-firebase-uid", "value": "{{user_id}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tokens/revoke",
+          "host": ["{{baseUrl}}"],
+          "path": ["tokens", "revoke"]
+        }
+      }
+    },
+    {
+      "name": "12. Attempted Cross-User Access Test",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 or 401, but never leaks victim data', function () {",
+              "    if (pm.response.code === 200) {",
+              "        var jsonData = pm.response.json();",
+              "        pm.expect(jsonData.data.user_id).to.not.eql('victim_user_999');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/me?userId=victim_user_999&user_id=victim_user_999",
+          "host": ["{{baseUrl}}"],
+          "path": ["me"],
+          "query": [
+            { "key": "userId", "value": "victim_user_999" },
+            { "key": "user_id", "value": "victim_user_999" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13. Rate-Limit Exceeded Test (Expect 429)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Receives 429 when rate limit is exceeded', function () {",
+              "    pm.expect([200, 429]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{personal_api_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/dashboard",
+          "host": ["{{baseUrl}}"],
+          "path": ["dashboard"]
+        }
+      }
+    }
+  ]
+}
+

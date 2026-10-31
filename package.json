@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "server": "tsx server/src/index.ts",
     "server:dev": "tsx watch server/src/index.ts",
-    "test:mcp": "tsx server/test/mcp.test.ts"
+    "test:mcp": "tsx server/test/mcp.test.ts",
+    "test:api": "tsx server/test/personal_api.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

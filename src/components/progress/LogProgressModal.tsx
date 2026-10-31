@@ -41,7 +41,7 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Log Body Measurements">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+          <label className="block text-xs font-mono uppercase text-secondary mb-1">
             Body Weight (kg) *
           </label>
           <input
@@ -51,13 +51,13 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
             placeholder="e.g. 75.5"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+            className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Body Fat (%)
             </label>
             <input
@@ -66,12 +66,12 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
               placeholder="e.g. 15.0"
               value={bodyFat}
               onChange={(e) => setBodyFat(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Waist (cm)
             </label>
             <input
@@ -80,14 +80,14 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
               placeholder="e.g. 80.0"
               value={waist}
               onChange={(e) => setWaist(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Chest (cm)
             </label>
             <input
@@ -96,12 +96,12 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
               placeholder="e.g. 100.0"
               value={chest}
               onChange={(e) => setChest(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Arms (cm)
             </label>
             <input
@@ -110,24 +110,24 @@ export const LogProgressModal: React.FC<LogProgressModalProps> = ({
               placeholder="e.g. 38.0"
               value={arms}
               onChange={(e) => setArms(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-outline-variant/20">
+        <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant text-xs font-semibold"
+            className="px-4 py-2 rounded border border-outline-variant text-secondary hover:text-primary transition-colors text-xs font-medium cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-5 py-2 rounded-xl bg-primary-container text-on-primary-fixed text-xs font-bold shadow-[0_0_12px_rgba(0,210,255,0.3)]"
+            className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-neutral-800 transition-colors text-xs font-medium cursor-pointer"
           >
-            Save Progress Entry
+            Commit Entry
           </button>
         </div>
       </form>

@@ -57,7 +57,6 @@ export const NutritionPage: React.FC = () => {
       return;
     }
 
-    // Group meals by date (YYYY-MM-DD)
     const mealsByDateMap: Record<string, MealEntry[]> = {};
     fetchedMeals.forEach((meal) => {
       const d = meal.date || new Date().toISOString().split('T')[0];
@@ -97,81 +96,62 @@ export const NutritionPage: React.FC = () => {
         dayP += m.protein || 0;
         dayC += m.carbs || 0;
         dayF += m.fats || 0;
-
         csvLines.push(
-          [
-            `"${m.time || ''}"`,
-            `"${m.meal_type.toUpperCase()}"`,
-            `"${(m.food_name || '').replace(/"/g, '""')}"`,
-            m.amount !== undefined ? m.amount : '',
-            `"${m.unit || 'g'}"`,
-            m.calories || 0,
-            m.protein || 0,
-            m.carbs || 0,
-            m.fats || 0,
-          ].join(',')
+          `"${m.time || ''}","${m.meal_type || ''}","${(m.food_name || '').replace(/"/g, '""')}","${m.amount || ''}","${m.unit || ''}",${m.calories || 0},${m.protein || 0},${m.carbs || 0},${m.fats || 0}`
         );
       });
 
-      csvLines.push(
-        `"--- DAILY TOTAL (${dateStr}) ---",,,,,${dayCals},${dayP.toFixed(1)},${dayC.toFixed(1)},${dayF.toFixed(1)}`
-      );
+      csvLines.push(`TOTALS,,,,,,${dayCals},${dayP},${dayC},${dayF}`);
       csvLines.push('');
     });
 
-    const csvContent = csvLines.join('\n');
-
-    // Trigger Browser Download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const todayStr = new Date().toISOString().split('T')[0];
-    const safeUserName = (currentUser.name || 'user').replace(/\s+/g, '_');
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', `FitTrack_Nutrition_Log_${safeUserName}_${todayStr}.csv`);
+    link.href = url;
+    link.setAttribute('download', `fittrack_nutrition_log_${currentUser.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Sub-header Breadcrumb & Operational Bar matching Stitch */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-outline-variant">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">AI Nutrition Tracker</h1>
-          <p className="text-xs text-on-surface-variant">
-            Describe your meal to Gemini AI for automated nutritional analysis and real macro tracking.
+          <div className="flex items-center gap-2 mb-1.5 font-mono text-xs text-secondary uppercase tracking-wider">
+            <span>Metabolic Logs</span>
+            <span>/</span>
+            <span className="text-primary font-medium">Daily Telemetry</span>
+          </div>
+          <h1 className="font-heading text-2xl font-semibold text-primary tracking-tight">
+            Today&apos;s Fuel Breakdown
+          </h1>
+          <p className="text-xs text-secondary mt-0.5">
+            Real stored calorie &amp; macronutrient totals
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleDownloadLog}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface font-heading font-bold text-xs transition-all border border-outline-variant/20 shadow-sm"
-            title="Download CSV Log"
-          >
-            <span className="material-symbols-outlined text-[18px] text-primary-container">download</span>
-            <span>Download Log</span>
-          </button>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsGoalModalOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface font-heading font-bold text-xs transition-all border border-outline-variant/20 shadow-sm"
+            className="h-9 px-4 flex items-center gap-1.5 rounded border border-outline-variant bg-surface-container-lowest hover:bg-surface text-primary text-xs font-medium transition-colors cursor-pointer"
           >
-            ⚙️ Macro Targets
+            <span className="material-symbols-outlined text-[16px]">tune</span>
+            <span>Targets</span>
           </button>
           <button
             onClick={handleOpenNewMealModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-container text-on-primary-fixed font-heading font-bold text-xs shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-105 transition-all"
+            className="h-9 px-4 flex items-center gap-1.5 rounded bg-primary text-on-primary hover:bg-neutral-800 text-xs font-medium transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-            <span>Log Meal</span>
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span>+ Log Meal</span>
           </button>
         </div>
       </div>
 
-      {/* Main Nutrition Summary Card */}
+      {/* Main Nutrition Summary Card & Historical Accordion */}
       <NutritionSummaryCard
         goal={nutritionGoal}
         todayConsumed={todayConsumed}
@@ -183,16 +163,18 @@ export const NutritionPage: React.FC = () => {
         onDownloadLog={handleDownloadLog}
       />
 
-      {/* Target Configuration Modal */}
-      <NutritionGoalModal
-        isOpen={isGoalModalOpen}
-        onClose={() => setIsGoalModalOpen(false)}
-        onSave={handleSaveGoal}
-        initialGoal={nutritionGoal}
-      />
+      {/* Target Goal Modal */}
+      {isGoalModalOpen && (
+        <NutritionGoalModal
+          isOpen={isGoalModalOpen}
+          onClose={() => setIsGoalModalOpen(false)}
+          onSave={handleSaveGoal}
+          initialGoal={nutritionGoal}
+        />
+      )}
 
-      {/* Gemini AI Log Meal Modal */}
-      {currentUser && (
+      {/* Log Meal Modal with AI and Manual Mode */}
+      {isMealModalOpen && currentUser && (
         <LogMealModal
           isOpen={isMealModalOpen}
           onClose={() => {
@@ -200,8 +182,8 @@ export const NutritionPage: React.FC = () => {
             setEditingMeal(null);
           }}
           onSaveMeal={handleSaveMeal}
+          initialMeal={editingMeal}
           userId={currentUser.id}
-          editingMeal={editingMeal}
         />
       )}
     </div>

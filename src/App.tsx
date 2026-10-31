@@ -12,8 +12,10 @@ import { WorkoutPage } from './pages/WorkoutPage';
 import { NutritionPage } from './pages/NutritionPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { GoalsPage } from './pages/GoalsPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { AIPage } from './pages/AIPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { RADIOACTIVE_LOGO } from './assets/logo';
 
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -21,11 +23,15 @@ const MainLayout: React.FC = () => {
 
   if (dataLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-surface-container-lowest flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-primary-container border-t-transparent rounded-full animate-spin" />
-          <div className="font-heading font-bold text-xs text-on-surface-variant uppercase tracking-wider">
-            Loading Fitness Data...
+          <img
+            src={RADIOACTIVE_LOGO}
+            alt="Radioactive"
+            className="w-10 h-10 rounded-lg object-contain bg-white border border-outline-variant p-1 animate-pulse"
+          />
+          <div className="font-mono text-xs text-secondary uppercase tracking-wider">
+            Loading Radioactive OS...
           </div>
         </div>
       </div>
@@ -46,6 +52,8 @@ const MainLayout: React.FC = () => {
         return <ProgressPage />;
       case 'goals':
         return <GoalsPage />;
+      case 'calendar':
+        return <CalendarPage />;
       case 'ai':
         return <AIPage />;
       case 'settings':
@@ -56,17 +64,34 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface font-sans flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-fixed">
-      {/* Header Bar */}
-      <Header activeTab={activeTab} />
+    <div className="min-h-screen bg-background text-primary font-sans flex flex-col antialiased relative">
+      {/* Fixed Fullscreen Background Logo Watermark across all pages */}
+      <div
+        className="fixed inset-0 md:left-[260px] flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        <img
+          src={RADIOACTIVE_LOGO}
+          alt=""
+          className="w-[520px] h-[520px] sm:w-[720px] sm:h-[720px] lg:w-[880px] lg:h-[880px] max-w-none object-contain opacity-[0.16] mix-blend-multiply filter contrast-125"
+        />
+      </div>
 
-      {/* Desktop Sidebar Navigation */}
+      {/* Sidebar Navigation */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 md:pl-64 pt-20 pb-24 md:pb-12 px-4 md:px-8 max-w-7xl w-full mx-auto">
-        {renderActivePage()}
-      </main>
+      {/* Main Content Shell with desktop offset */}
+      <div className="md:pl-[260px] flex flex-col min-h-screen relative z-10">
+        {/* Header Bar */}
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Page Content */}
+        <main className="flex-1 pt-14 pb-20 md:pb-8">
+          <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {renderActivePage()}
+          </div>
+        </main>
+      </div>
 
       {/* Mobile Bottom Navigation */}
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -79,10 +104,10 @@ const AuthGuard: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-surface-container-lowest flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-primary-container border-t-transparent rounded-full animate-spin" />
-          <div className="font-heading font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="font-mono text-xs text-secondary uppercase tracking-wider">
             Verifying Credentials...
           </div>
         </div>
@@ -101,7 +126,7 @@ const AuthGuard: React.FC = () => {
   );
 };
 
-export default function App() {
+export function App() {
   return (
     <AuthProvider>
       <AuthGuard />
@@ -109,3 +134,4 @@ export default function App() {
   );
 }
 
+export default App;

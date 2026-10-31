@@ -4,7 +4,9 @@ import { config } from './config.js';
 import { authMiddleware } from './auth/authMiddleware.js';
 import { handleSSE, handleMessages } from './mcp/sseHandler.js';
 import { handleOpenApi } from './routes/openapi.js';
+import { handleOpenApiV1 } from './routes/openapi_v1_handler.js';
 import { apiRouter } from './routes/apiRoutes.js';
+import { personalApiRouter } from './routes/personalApiRoutes.js';
 import { allTools } from './tools/registry.js';
 
 const app = express();
@@ -27,7 +29,7 @@ app.get('/health', (_req, res) => {
 
 // Root / Welcome & Discovery
 app.get('/', (req, res) => {
-  const host = req.get('host') || 'localhost:3001';
+  const host = req.get('host') || 'localhost:3005';
   const protocol = req.protocol;
   const baseUrl = `${protocol}://${host}`;
 
@@ -53,11 +55,17 @@ app.get('/', (req, res) => {
 // OpenAPI 3.0 specification for ChatGPT Actions
 app.get('/openapi.json', handleOpenApi);
 
+// OpenAPI 3.1 specification for Personal REST API
+app.get('/api/v1/openapi.json', handleOpenApiV1);
+
 // Standard MCP Endpoints (Server-Sent Events)
 app.get('/sse', authMiddleware, handleSSE);
 app.post('/messages', authMiddleware, handleMessages);
 
-// REST API Endpoints for ChatGPT Actions and direct calls
+// Personal REST API (Authenticated via Personal API Bearer Token)
+app.use('/api/v1', authMiddleware, personalApiRouter);
+
+// Tool Execution REST API (MCP Tool Bridge)
 app.use('/api/v1', authMiddleware, apiRouter);
 
 // Global Error Handler

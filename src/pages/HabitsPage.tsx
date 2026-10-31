@@ -25,24 +25,28 @@ export const HabitsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">Daily Disciplines</h1>
-          <p className="text-xs text-on-surface-variant">Build consistency one day at a time with 21-day matrix cohorts.</p>
+          <h1 className="font-heading text-2xl font-semibold text-primary tracking-tight">
+            Daily Disciplines
+          </h1>
+          <p className="text-xs text-secondary mt-0.5">
+            Build consistency one day at a time with 21-day matrix cohorts.
+          </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-container text-on-primary-fixed font-heading font-bold text-xs shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-105 active:scale-95 transition-all"
+          className="h-9 px-4 bg-primary text-on-primary font-medium text-xs rounded hover:bg-neutral-800 transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Add Habit</span>
         </button>
       </div>
 
-      {/* Spreadsheet Matrix */}
+      {/* Spreadsheet Matrix Table */}
       <HabitGrid
         habits={habits}
         completionsMap={completionsMap}

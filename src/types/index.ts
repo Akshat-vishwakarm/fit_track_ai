@@ -163,6 +163,29 @@ export interface Goal {
   created_at: string;
 }
 
+export interface FocusDeadline {
+  id: string;
+  user_id: string;
+  title: string;
+  target_date: string;
+  category: 'fitness' | 'weight' | 'habit' | 'race' | 'custom';
+  target_note?: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface CalendarNote {
+  id: string;
+  user_id: string;
+  date: string;
+  note: string;
+  weight?: number;
+  activity?: string;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MLConfig {
   id: string;
   user_id: string;

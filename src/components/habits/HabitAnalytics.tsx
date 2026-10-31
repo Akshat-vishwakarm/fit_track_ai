@@ -47,86 +47,106 @@ export const HabitAnalytics: React.FC<HabitAnalyticsProps> = ({ habits, completi
   const overallMeanPct = totalPossible21 > 0 ? Math.round((totalCompletions21 / totalPossible21) * 100) : 0;
 
   return (
-    <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-4 shadow-lg">
-      <div className="flex items-center justify-between">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Cadence Bar Visualization Card (8 Cols) */}
+      <div className="lg:col-span-8 border border-outline-variant rounded-lg bg-surface-container-lowest p-5 sm:p-6 flex flex-col justify-between shadow-sm">
         <div>
-          <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-            Cadence Analytics
-          </span>
-          <p className="text-xs text-on-surface-variant">21-Day consecutive consistency density</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-outline-variant">
+            <div className="flex flex-col">
+              <span className="font-heading text-base font-semibold text-primary">Cadence Analytics</span>
+              <span className="font-mono text-xs text-secondary mt-0.5">21-Day consecutive consistency density</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 border border-outline-variant rounded bg-surface font-mono text-xs text-primary">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span>Telemetry Active</span>
+            </div>
+          </div>
+
+          {/* Minimalist Monochrome Bar Chart */}
+          <div className="mt-6">
+            <div className="h-44 w-full flex items-end justify-between gap-1 sm:gap-2 px-1 pt-4 border-b border-outline-variant">
+              {days21.map((item) => {
+                let barColor = 'bg-[#CCCCCC]';
+                if (item.weekGroup === 2) barColor = 'bg-[#777777]';
+                if (item.weekGroup === 3) barColor = 'bg-[#111111]';
+
+                const displayHeight = Math.max(8, Math.round(item.pct));
+
+                return (
+                  <div
+                    key={item.dateStr}
+                    className="flex-1 flex flex-col items-center gap-2 group h-full justify-end cursor-pointer"
+                    title={`Day ${item.dayNum}: ${item.completedCount}/${habits.length} habits (${Math.round(item.pct)}%)`}
+                  >
+                    <div
+                      className={`w-full ${barColor} rounded-t transition-all group-hover:brightness-90`}
+                      style={{ height: `${displayHeight}%` }}
+                    />
+                    <span className="font-mono text-[10px] text-secondary hidden sm:inline">
+                      {String(item.dayNum).padStart(2, '0')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-surface-container-highest font-heading text-[10px] font-bold text-secondary uppercase">
-          Telemetry Active
-        </span>
+
+        {/* Legend and Aggregates */}
+        <div className="mt-4 pt-3 flex flex-wrap items-center justify-between gap-3 text-secondary border-t border-outline-variant">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <span className="w-2.5 h-2.5 bg-[#CCCCCC] rounded-xs" />
+              <span>W1 (Baseline)</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <span className="w-2.5 h-2.5 bg-[#777777] rounded-xs" />
+              <span>W2 (Ramp)</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <span className="w-2.5 h-2.5 bg-[#111111] rounded-xs" />
+              <span>W3 (Peak Cadence)</span>
+            </div>
+          </div>
+
+          <div className="font-mono text-xs text-primary font-medium">
+            Mean Consistency: {overallMeanPct}%
+          </div>
+        </div>
       </div>
 
-      {/* Histogram Graphic */}
-      <div className="flex flex-col bg-surface-container rounded-xl p-4 space-y-2 border border-outline-variant/10">
-        <div className="flex justify-between items-center text-on-surface-variant font-heading text-[11px]">
-          <span>Completion Density</span>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary-container"></span>W1
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-secondary-container"></span>W2
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-tertiary-container"></span>W3
-            </span>
+      {/* Reference Telemetry Card (4 Cols) */}
+      <div className="lg:col-span-4 border border-outline-variant rounded-lg bg-surface-container-lowest p-5 sm:p-6 flex flex-col justify-between shadow-sm">
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
+            <span className="text-[11px] uppercase tracking-wider text-secondary font-medium">Execution Telemetry</span>
+            <span className="font-mono text-[10px] text-secondary border border-outline-variant px-1 rounded">21D COHORT</span>
+          </div>
+
+          <div className="mt-4 space-y-3 font-sans text-xs">
+            <div className="flex justify-between py-1.5 border-b border-outline-variant">
+              <span className="text-secondary">Active Routines</span>
+              <span className="font-mono text-primary font-medium">{habits.length}</span>
+            </div>
+            <div className="flex justify-between py-1.5 border-b border-outline-variant">
+              <span className="text-secondary">Current Continuous Streak</span>
+              <span className="font-mono text-primary font-medium">{streak.currentStreak} Days</span>
+            </div>
+            <div className="flex justify-between py-1.5 border-b border-outline-variant">
+              <span className="text-secondary">Best Recorded Streak</span>
+              <span className="font-mono text-primary font-medium">{streak.bestStreak} Days</span>
+            </div>
+            <div className="flex justify-between py-1.5 border-b border-outline-variant">
+              <span className="text-secondary">Storage Engine</span>
+              <span className="font-mono text-primary font-medium">IndexedDB (Dexie)</span>
+            </div>
           </div>
         </div>
 
-        <div className="h-28 flex items-end justify-between pt-4 gap-1">
-          {days21.map((item) => {
-            let barColor = 'bg-primary-container';
-            if (item.weekGroup === 2) barColor = 'bg-secondary-container';
-            if (item.weekGroup === 3) barColor = 'bg-tertiary-container';
-
-            return (
-              <div
-                key={item.dateStr}
-                className="flex-1 flex flex-col items-center h-full justify-end group relative"
-                title={`Day ${item.dayNum}: ${item.completedCount}/${habits.length} habits (${Math.round(item.pct)}%)`}
-              >
-                <div
-                  className={`w-full ${barColor} rounded-t-sm transition-all duration-500`}
-                  style={{ height: `${Math.max(5, item.pct)}%` }}
-                />
-                <span className="font-heading text-[9px] text-on-surface-variant mt-1">
-                  {item.dayNum}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Summary KPI Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-        <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10">
-          <div className="text-[10px] font-heading font-bold text-on-surface-variant uppercase">
-            Active Habits
-          </div>
-          <div className="font-heading text-lg font-extrabold text-on-surface">{habits.length}</div>
-        </div>
-        <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10">
-          <div className="text-[10px] font-heading font-bold text-on-surface-variant uppercase">
-            21-Day Mean
-          </div>
-          <div className="font-heading text-lg font-extrabold text-tertiary-container">{overallMeanPct}%</div>
-        </div>
-        <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10">
-          <div className="text-[10px] font-heading font-bold text-on-surface-variant uppercase">
-            Current Streak
-          </div>
-          <div className="font-heading text-lg font-extrabold text-flame">{streak.currentStreak} Days</div>
-        </div>
-        <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10">
-          <div className="text-[10px] font-heading font-bold text-on-surface-variant uppercase">
-            Best Streak
-          </div>
-          <div className="font-heading text-lg font-extrabold text-secondary">{streak.bestStreak} Days</div>
+        <div className="pt-4 border-t border-outline-variant">
+          <p className="text-[11px] text-secondary leading-relaxed">
+            Every daily check is strictly tracked. Frozen past days cannot be retroactively toggled, reinforcing authentic habit adherence.
+          </p>
         </div>
       </div>
     </div>

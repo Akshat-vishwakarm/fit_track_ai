@@ -10,6 +10,8 @@ import type {
   ProgressEntry,
   Goal,
   MLConfig,
+  FocusDeadline,
+  CalendarNote,
 } from '../types';
 
 export class FitTrackDatabase extends Dexie {
@@ -23,10 +25,12 @@ export class FitTrackDatabase extends Dexie {
   progressEntries!: Table<ProgressEntry, string>;
   goals!: Table<Goal, string>;
   mlConfigs!: Table<MLConfig, string>;
+  focusDeadlines!: Table<FocusDeadline, string>;
+  calendarNotes!: Table<CalendarNote, string>;
 
   constructor() {
     super('FitTrackAIDB');
-    
+
     // Schema definitions: Primary key, then indexed fields
     this.version(1).stores({
       users: 'id, email',
@@ -39,6 +43,12 @@ export class FitTrackDatabase extends Dexie {
       progressEntries: 'id, user_id, date',
       goals: 'id, user_id, category, status',
       mlConfigs: 'id, user_id',
+    });
+
+    // Version 2: Add focusDeadlines and calendarNotes
+    this.version(2).stores({
+      focusDeadlines: 'id, user_id, target_date, active',
+      calendarNotes: 'id, user_id, date, [user_id+date]',
     });
   }
 }

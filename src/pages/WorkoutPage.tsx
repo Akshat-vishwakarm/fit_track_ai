@@ -59,20 +59,24 @@ export const WorkoutPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">Gym & Training Split</h1>
-          <p className="text-xs text-on-surface-variant">Configure your weekly workout split (Mon-Sun) and track logged sessions.</p>
+          <h1 className="font-heading text-2xl font-semibold text-primary tracking-tight">
+            Gym &amp; Workout Routine
+          </h1>
+          <p className="text-xs text-secondary mt-0.5">
+            Configure your weekly training split (Mon – Sun) and log training sessions.
+          </p>
         </div>
 
         <button
           onClick={() => handleOpenConfigure(0)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary-container text-on-secondary-fixed font-heading font-bold text-xs shadow-[0_0_15px_rgba(0,229,153,0.3)] hover:scale-105 transition-all"
+          className="h-9 px-4 bg-primary text-on-primary text-xs font-medium rounded hover:bg-neutral-800 transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          <span>Create Workout Split</span>
+          <span className="material-symbols-outlined text-[16px]">add</span>
+          <span>+ Create Workout Plan</span>
         </button>
       </div>
 
@@ -100,8 +104,8 @@ export const WorkoutPage: React.FC = () => {
           isOpen={isLogModalOpen}
           onClose={() => setIsLogModalOpen(false)}
           onSaveLog={handleSaveLog}
-          plan={activeLoggingPlan}
           userId={currentUser.id}
+          initialPlan={activeLoggingPlan}
         />
       )}
     </div>

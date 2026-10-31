@@ -94,13 +94,13 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Training Day
             </label>
             <select
               value={dayOfWeek}
               onChange={(e) => setDayOfWeek(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary"
             >
               {DAYS.map((d, i) => (
                 <option key={d} value={i}>
@@ -111,7 +111,7 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Workout Title *
             </label>
             <input
@@ -120,13 +120,13 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
               placeholder="e.g. Push Hypertrophy"
               value={workoutName}
               onChange={(e) => setWorkoutName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+          <label className="block text-xs font-mono uppercase text-secondary mb-1">
             Target Muscle Group
           </label>
           <input
@@ -134,20 +134,20 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
             placeholder="e.g. Chest, Shoulders, Triceps"
             value={muscleGroup}
             onChange={(e) => setMuscleGroup(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+            className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Exercises Builder */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-heading font-bold text-on-surface uppercase">
+            <label className="text-xs font-mono uppercase text-secondary font-medium">
               Exercise List ({exercises.length})
             </label>
             <button
               type="button"
               onClick={handleAddExerciseRow}
-              className="text-xs text-primary-container font-bold flex items-center gap-1 hover:underline"
+              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>Add Exercise</span>
@@ -158,7 +158,7 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
             {exercises.map((ex, idx) => (
               <div
                 key={ex.id}
-                className="bg-surface-container p-3 rounded-xl border border-outline-variant/20 space-y-2 relative"
+                className="bg-surface p-3 rounded border border-outline-variant space-y-2 relative"
               >
                 <div className="flex items-center gap-2">
                   <input
@@ -167,12 +167,12 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
                     placeholder="Exercise Name (e.g. Incline Bench Press)"
                     value={ex.name}
                     onChange={(e) => handleExerciseChange(idx, 'name', e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs focus:outline-none focus:border-primary-container"
+                    className="flex-1 px-3 py-1.5 rounded bg-surface-container-lowest border border-outline-variant text-primary text-xs focus:outline-none focus:border-primary"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveExerciseRow(idx)}
-                    className="text-on-surface-variant hover:text-error p-1"
+                    className="text-secondary hover:text-error p-1 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                   </button>
@@ -180,7 +180,7 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
 
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-[10px] text-on-surface-variant font-semibold">
+                    <label className="block text-[10px] font-mono uppercase text-secondary">
                       Sets
                     </label>
                     <input
@@ -190,11 +190,11 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
                       onChange={(e) =>
                         handleExerciseChange(idx, 'target_sets', Number(e.target.value))
                       }
-                      className="w-full px-2 py-1 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs"
+                      className="w-full px-2 py-1 rounded bg-surface-container-lowest border border-outline-variant text-primary text-xs font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-on-surface-variant font-semibold">
+                    <label className="block text-[10px] font-mono uppercase text-secondary">
                       Target Reps
                     </label>
                     <input
@@ -204,11 +204,11 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
                       onChange={(e) =>
                         handleExerciseChange(idx, 'target_reps', Number(e.target.value))
                       }
-                      className="w-full px-2 py-1 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs"
+                      className="w-full px-2 py-1 rounded bg-surface-container-lowest border border-outline-variant text-primary text-xs font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-on-surface-variant font-semibold">
+                    <label className="block text-[10px] font-mono uppercase text-secondary">
                       Weight (kg)
                     </label>
                     <input
@@ -219,7 +219,7 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
                       onChange={(e) =>
                         handleExerciseChange(idx, 'target_weight', Number(e.target.value))
                       }
-                      className="w-full px-2 py-1 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs"
+                      className="w-full px-2 py-1 rounded bg-surface-container-lowest border border-outline-variant text-primary text-xs font-mono"
                     />
                   </div>
                 </div>
@@ -228,17 +228,17 @@ export const WorkoutPlanModal: React.FC<WorkoutPlanModalProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-outline-variant/20">
+        <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant text-xs font-semibold"
+            className="px-4 py-2 rounded border border-outline-variant text-secondary hover:text-primary transition-colors text-xs font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-5 py-2 rounded-xl bg-primary-container text-on-primary-fixed text-xs font-bold shadow-[0_0_12px_rgba(0,210,255,0.3)]"
+            className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-neutral-800 transition-colors text-xs font-medium"
           >
             Save Training Split
           </button>

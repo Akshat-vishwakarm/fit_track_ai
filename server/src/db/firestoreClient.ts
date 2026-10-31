@@ -23,6 +23,8 @@ import type {
   MealEntry,
   ProgressEntry,
   Goal,
+  WaterEntry,
+  WaterGoal,
 } from '../types.js';
 
 let firestoreInstance: Firestore | null = null;
@@ -56,6 +58,10 @@ function getMemCollection(userId: string, colName: string): any[] {
 }
 
 let isCloudFirestoreDisabled = process.env.NODE_ENV === 'test';
+
+export function setCloudFirestoreDisabled(disabled: boolean) {
+  isCloudFirestoreDisabled = disabled;
+}
 
 const withTimeout = async <T>(promise: Promise<T>, fallback: T, ms = 300): Promise<T> => {
   if (isCloudFirestoreDisabled) return fallback;
@@ -109,17 +115,19 @@ export const firestoreClient = {
   },
 
   async updateHabit(userId: string, habitId: string, updates: Partial<Habit>): Promise<Habit> {
-    const db = getDb();
-    if (db) {
-      try {
-        const docRef = doc(db, 'users', userId, 'habits', habitId);
-        await setDoc(docRef, updates, { merge: true });
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          return { id: snap.id, ...snap.data() } as Habit;
+    if (!isCloudFirestoreDisabled) {
+      const db = getDb();
+      if (db) {
+        try {
+          const docRef = doc(db, 'users', userId, 'habits', habitId);
+          await withTimeout(setDoc(docRef, updates, { merge: true }), null as any);
+          const snap = await withTimeout(getDoc(docRef), null as any);
+          if (snap && snap.exists()) {
+            return { id: snap.id, ...snap.data() } as Habit;
+          }
+        } catch (err) {
+          // Fallback to memory
         }
-      } catch (err) {
-        // Fallback to memory
       }
     }
     const mem = getMemCollection(userId, 'habits');
@@ -276,7 +284,7 @@ export const firestoreClient = {
     if (colRef) {
       try {
         const docRef = doc(getDb()!, 'users', userId, 'workoutLogs', newLog.id);
-        await setDoc(docRef, newLog);
+        await withTimeout(setDoc(docRef, newLog), null as any);
         return newLog;
       } catch (err) {
         // Fallback to memory
@@ -372,7 +380,7 @@ export const firestoreClient = {
     if (colRef) {
       try {
         const docRef = doc(getDb()!, 'users', userId, 'mealEntries', newEntry.id);
-        await setDoc(docRef, newEntry);
+        await withTimeout(setDoc(docRef, newEntry), null as any);
         return newEntry;
       } catch (err) {
         // Fallback to memory
@@ -422,7 +430,7 @@ export const firestoreClient = {
     if (colRef) {
       try {
         const docRef = doc(getDb()!, 'users', userId, 'progressEntries', newEntry.id);
-        await setDoc(docRef, newEntry);
+        await withTimeout(setDoc(docRef, newEntry), null as any);
         return newEntry;
       } catch (err) {
         // Fallback
@@ -470,17 +478,19 @@ export const firestoreClient = {
   },
 
   async updateGoal(userId: string, goalId: string, updates: Partial<Goal>): Promise<Goal> {
-    const db = getDb();
-    if (db) {
-      try {
-        const docRef = doc(db, 'users', userId, 'goals', goalId);
-        await setDoc(docRef, updates, { merge: true });
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          return { id: snap.id, ...snap.data() } as Goal;
+    if (!isCloudFirestoreDisabled) {
+      const db = getDb();
+      if (db) {
+        try {
+          const docRef = doc(db, 'users', userId, 'goals', goalId);
+          await withTimeout(setDoc(docRef, updates, { merge: true }), null as any);
+          const snap = await withTimeout(getDoc(docRef), null as any);
+          if (snap && snap.exists()) {
+            return { id: snap.id, ...snap.data() } as Goal;
+          }
+        } catch (err) {
+          // Fallback
         }
-      } catch (err) {
-        // Fallback
       }
     }
     const mem = getMemCollection(userId, 'goals');
@@ -492,5 +502,102 @@ export const firestoreClient = {
     const created = { id: goalId, user_id: userId, ...updates } as Goal;
     mem.push(created);
     return created;
+  },
+
+  // --- HYDRATION & WATER ---
+  async getWaterEntries(
+    userId: string,
+    date?: string,
+    startDate?: string,
+    endDate?: string,
+    limitCount = 50
+  ): Promise<WaterEntry[]> {
+    const colRef = this.getUserCol(userId, 'waterEntries');
+    if (colRef) {
+      try {
+        const fetchPromise = getDocs(colRef).then((snap) => {
+          let list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WaterEntry));
+          if (date) list = list.filter((w) => w.date === date);
+          if (startDate) list = list.filter((w) => w.date >= startDate);
+          if (endDate) list = list.filter((w) => w.date <= endDate);
+          return list.sort((a, b) => (b.time || '').localeCompare(a.time || '')).slice(0, limitCount);
+        });
+        const results = await withTimeout(fetchPromise, null as any);
+        if (results) return results;
+      } catch (err) {
+        // Fallback
+      }
+    }
+    const mem = getMemCollection(userId, 'waterEntries');
+    return mem
+      .filter((w) => (!date || w.date === date) && (!startDate || w.date >= startDate) && (!endDate || w.date <= endDate))
+      .sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+      .slice(0, limitCount);
+  },
+
+  async addWaterEntry(userId: string, entry: Omit<WaterEntry, 'id' | 'created_at'>): Promise<WaterEntry> {
+    const newEntry: WaterEntry = {
+      ...entry,
+      id: 'we_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      user_id: userId,
+      created_at: new Date().toISOString(),
+    };
+    const colRef = this.getUserCol(userId, 'waterEntries');
+    if (colRef) {
+      try {
+        const docRef = doc(getDb()!, 'users', userId, 'waterEntries', newEntry.id);
+        await withTimeout(setDoc(docRef, newEntry), null as any);
+        return newEntry;
+      } catch (err) {
+        // Fallback
+      }
+    }
+    getMemCollection(userId, 'waterEntries').push(newEntry);
+    return newEntry;
+  },
+
+  async getWaterGoal(userId: string): Promise<WaterGoal | null> {
+    const colRef = this.getUserCol(userId, 'waterGoals');
+    if (colRef) {
+      try {
+        const fetchPromise = getDocs(colRef).then((snap) => {
+          if (snap.empty) return null;
+          return { id: snap.docs[0].id, ...snap.docs[0].data() } as WaterGoal;
+        });
+        const result = await withTimeout(fetchPromise, undefined as any);
+        if (result !== undefined) return result;
+      } catch (err) {
+        // Fallback
+      }
+    }
+    const mem = getMemCollection(userId, 'waterGoals');
+    return mem.length > 0 ? mem[0] : null;
+  },
+
+  async saveWaterGoal(userId: string, target_ml: number): Promise<WaterGoal> {
+    const colRef = this.getUserCol(userId, 'waterGoals');
+    const data: WaterGoal = {
+      id: 'wg_' + userId,
+      user_id: userId,
+      daily_target_ml: target_ml,
+      updated_at: new Date().toISOString(),
+    };
+    if (colRef) {
+      try {
+        const docRef = doc(getDb()!, 'users', userId, 'waterGoals', data.id);
+        await withTimeout(setDoc(docRef, data, { merge: true }), null as any);
+        return data;
+      } catch (err) {
+        // Fallback
+      }
+    }
+    const mem = getMemCollection(userId, 'waterGoals');
+    const existing = mem.findIndex((g) => g.user_id === userId);
+    if (existing >= 0) {
+      mem[existing] = data;
+    } else {
+      mem.push(data);
+    }
+    return data;
   },
 };

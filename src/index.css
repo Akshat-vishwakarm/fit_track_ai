@@ -1,54 +1,88 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0f131c;
-  --color-surface: #0f131c;
-  --color-surface-container-lowest: #0a0e16;
-  --color-surface-container-low: #181c24;
-  --color-surface-container: #1c2028;
-  --color-surface-container-high: #262a33;
-  --color-surface-container-highest: #31353e;
-  --color-surface-variant: #31353e;
-  --color-primary: #a5e7ff;
-  --color-primary-container: #00d2ff;
-  --color-on-primary-fixed: #001f28;
-  --color-secondary: #70ffba;
-  --color-secondary-container: #00e599;
-  --color-on-secondary-fixed: #002112;
-  --color-tertiary: #edd4ff;
-  --color-tertiary-container: #dab1ff;
-  --color-on-tertiary-fixed: #2c0051;
-  --color-on-surface: #dfe2ee;
-  --color-on-surface-variant: #bbc9cf;
-  --color-outline: #859399;
-  --color-outline-variant: #3c494e;
-  --color-flame: #f97316;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-heading: 'Space Grotesk', sans-serif;
+  --color-background: #f8f8f8;
+  --color-surface: rgba(255, 255, 255, 0.45);
+  --color-surface-container-lowest: rgba(255, 255, 255, 0.40);
+  --color-surface-container-low: rgba(245, 245, 245, 0.40);
+  --color-surface-container: rgba(238, 238, 238, 0.35);
+  --color-surface-container-high: rgba(232, 232, 232, 0.40);
+  --color-surface-container-highest: rgba(226, 226, 226, 0.45);
+  --color-surface-variant: rgba(226, 226, 226, 0.35);
+  --color-surface-tint: #5f5e5e;
+  --color-primary: #000000;
+  --color-primary-container: #111111;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #111111;
+  --color-secondary: #555555;
+  --color-secondary-container: rgba(229, 229, 229, 0.40);
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-fixed: #111111;
+  --color-tertiary: #000000;
+  --color-tertiary-container: rgba(229, 229, 229, 0.40);
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #111111;
+  --color-on-surface: #111111;
+  --color-on-surface-variant: #555555;
+  --color-outline: rgba(119, 119, 119, 0.4);
+  --color-outline-variant: rgba(229, 229, 229, 0.85);
+  --color-flame: #111111;
+  --color-error: #ba1a1a;
+  --color-error-container: rgba(255, 218, 214, 0.6);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 @layer base {
-  body {
+  html, body {
+    margin: 0;
+    padding: 0;
     background-color: var(--color-background);
-    color: var(--color-on-surface);
+    color: var(--color-primary);
     font-family: var(--font-sans);
-    min-height: max(884px, 100dvh);
     overscroll-behavior: none;
+  }
+
+  /* Make all input, select, and textarea fields transparent for maximum background logo visibility */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  select:focus,
+  textarea:focus {
+    background-color: rgba(255, 255, 255, 0.65) !important;
   }
 }
 
-/* Custom scrollbars */
+/* Glassmorphic frosted transparency for all card containers, panels, and data output boxes */
+.bg-surface-container-lowest,
+.bg-surface-container-low,
+.bg-surface-container,
+.bg-surface-container-high,
+.bg-surface,
+.bg-surface-variant {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Minimalist Clean Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f131c;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #262a33;
-  border-radius: 9999px;
+  background: rgba(180, 180, 180, 0.4);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3c494e;
+  background: rgba(140, 140, 140, 0.7);
 }

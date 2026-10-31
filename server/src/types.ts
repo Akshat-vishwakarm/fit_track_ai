@@ -140,12 +140,29 @@ export interface Goal {
   created_at: string;
 }
 
+export interface WaterEntry {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  time?: string; // HH:mm
+  amount_ml: number;
+  created_at: string;
+}
+
+export interface WaterGoal {
+  id: string;
+  user_id: string;
+  daily_target_ml: number;
+  updated_at: string;
+}
+
 export interface UserContext {
   userId: string;
   name?: string;
   email?: string;
   role?: string;
   readOnly?: boolean;
+  tokenRecord?: any;
 }
 
 export interface ToolDefinition {

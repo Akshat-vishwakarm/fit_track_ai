@@ -1,0 +1,198 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FitTrack AI — Personal Fitness REST API",
+    "description": "Secure, authenticated REST API allowing users and compatible AI assistants (ChatGPT, Claude, custom agents) to query live fitness records: habits, hydration, nutrition, workouts, body weight, and goals with strict per-user data isolation.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api/v1",
+      "description": "Local FitTrack AI Server"
+    },
+    {
+      "url": "https://fittrack-ai-mcp.onrender.com/api/v1",
+      "description": "Production Render Cloud Backend"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "ft_live_*",
+        "description": "Enter your personal API token (e.g., ft_live_<64_hex_chars>). Derived from Settings -> API Integration."
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": { "type": "object" },
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "summary": "Get Authenticated User Profile",
+        "description": "Retrieves the account information and token metadata corresponding to the authenticated Bearer token.",
+        "responses": {
+          "200": { "description": "Profile retrieved successfully" },
+          "401": { "description": "Missing, invalid, expired or revoked token" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Get Today's Complete Fitness Dashboard",
+        "description": "Returns a compact holistic daily summary: calories vs goal, macro breakdown (protein, carbs, fats), water intake vs daily target, workout completion, habit completion ratio, latest body weight, and active goals.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "Target date in YYYY-MM-DD format (defaults to current date)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Dashboard summary synthesized successfully" },
+          "401": { "description": "Unauthorized" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    },
+    "/water/today": {
+      "get": {
+        "summary": "Get Today's Hydration Intake",
+        "description": "Returns water consumed in ml, daily target in ml, remaining ml, progress percentage, and individual water logs.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Hydration records retrieved" }
+        }
+      }
+    },
+    "/water/history": {
+      "get": {
+        "summary": "Get Hydration History",
+        "description": "Returns daily water totals and individual entries across a lookback window (default 7 days).",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 7 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Water history retrieved" }
+        }
+      }
+    },
+    "/nutrition/today": {
+      "get": {
+        "summary": "Get Today's Nutrition & Macro Breakdown",
+        "description": "Returns consumed calories, protein, carbs, fats, target comparison, and itemized food logs with timestamps.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Nutrition data retrieved" }
+        }
+      }
+    },
+    "/nutrition/history": {
+      "get": {
+        "summary": "Get Nutrition History",
+        "description": "Returns daily macro intake averages and logged meals count over N days.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 7 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Nutrition history retrieved" }
+        }
+      }
+    },
+    "/workouts": {
+      "get": {
+        "summary": "Get Workouts & Training Split",
+        "description": "Returns logged workout sessions in lookback period (exercise names, sets, reps, weight, volume, duration) and scheduled workout for today.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 7 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Workout sessions retrieved" }
+        }
+      }
+    },
+    "/habits": {
+      "get": {
+        "summary": "Get Habit Streaks & Adherence",
+        "description": "Returns active daily habits, completion status for today, current consecutive streaks, and 7d/30d adherence percentages.",
+        "responses": {
+          "200": { "description": "Habit records retrieved" }
+        }
+      }
+    },
+    "/weight": {
+      "get": {
+        "summary": "Get Body Weight & Measurements History",
+        "description": "Returns chronological body weight logs, body fat %, waist/chest/arm measurements, and weight change over lookback period.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Weight history retrieved" }
+        }
+      }
+    },
+    "/goals": {
+      "get": {
+        "summary": "Get Active Fitness Goals",
+        "description": "Returns user fitness goals with target values, current values, units, deadlines, and completion percentages.",
+        "responses": {
+          "200": { "description": "Goals retrieved" }
+        }
+      }
+    }
+  }
+}
+

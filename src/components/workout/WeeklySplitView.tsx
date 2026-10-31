@@ -25,133 +25,178 @@ export const WeeklySplitView: React.FC<WeeklySplitViewProps> = ({
 
   const hasAnyPlans = workoutPlans.length > 0;
 
+  // Calculate current completion rate for current week
+  const configuredDaysCount = workoutPlans.length;
+  const loggedWorkoutsCount = workoutLogs.length;
+  const completionRate = configuredDaysCount > 0
+    ? Math.min(100, Math.round((loggedWorkoutsCount / configuredDaysCount) * 100))
+    : 0;
+
+  // Date range for current week
+  const now = new Date();
+  const currentDayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon, 6=Sun
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - currentDayOfWeek);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+  const cycleStr = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`.toUpperCase();
+
   return (
     <div className="space-y-6">
-      {/* Zero State Banner if no plans exist */}
-      {!hasAnyPlans && (
-        <div className="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/20 shadow-lg text-center flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center text-secondary mb-4">
-            <span className="material-symbols-outlined text-[36px]">fitness_center</span>
+      {/* Top Utility Context Bar matching Stitch */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 border border-outline-variant rounded-lg bg-surface-container-lowest">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 font-mono text-xs text-secondary">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span className="font-medium text-primary uppercase tracking-wider">MODULE / 03</span>
           </div>
-          <h3 className="font-heading text-lg font-bold text-on-surface mb-1">No training split created</h3>
-          <p className="text-sm text-on-surface-variant max-w-sm mb-6">
-            Create your weekly training split (Monday - Sunday) to organize your workouts and track strength progress.
+          <span className="text-secondary font-mono text-xs">/</span>
+          <h2 className="font-heading text-sm text-primary font-semibold tracking-tight">
+            Weekly Schedule &amp; Routine
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <span className="text-secondary">CYCLE:</span>
+          <span className="px-2 py-0.5 bg-surface text-primary font-medium rounded border border-outline-variant">
+            {cycleStr}
+          </span>
+          <span className="text-secondary">|</span>
+          <span className="text-secondary">COMPLETION:</span>
+          <span className="text-primary font-medium">{completionRate}%</span>
+        </div>
+      </div>
+
+      {/* Empty State Hero Banner when no plans configured */}
+      {!hasAnyPlans && (
+        <section className="border border-outline-variant rounded-lg bg-surface-container-lowest p-8 sm:p-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="w-14 h-14 rounded border border-outline-variant bg-surface flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-primary text-[28px]">fitness_center</span>
+          </div>
+          <h2 className="font-heading text-xl text-primary tracking-tight font-semibold mb-1">
+            No training split created
+          </h2>
+          <p className="text-xs text-secondary max-w-md leading-relaxed mb-6">
+            Create your weekly training split (Monday – Sunday) to organize your workouts and track strength progress across all core muscle groups.
           </p>
           <button
             onClick={() => onConfigurePlan(0)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary-container text-on-secondary-fixed font-heading font-bold text-sm shadow-[0_0_12px_rgba(0,229,153,0.3)] hover:scale-105 active:scale-95 transition-all"
+            className="h-9 px-4 bg-primary text-on-primary text-xs font-medium rounded border border-primary hover:bg-neutral-800 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>Create Workout Plan</span>
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span>+ Create Workout Plan</span>
           </button>
-        </div>
+        </section>
       )}
 
-      {/* Grid of 7 Days */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Sub-header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+        <div className="flex items-center gap-2">
+          <h3 className="font-heading text-sm text-primary tracking-tight font-semibold">
+            Weekly Split (7 Days)
+          </h3>
+          <span className="px-2 py-0.5 font-mono text-[11px] border border-outline-variant rounded text-secondary bg-surface">
+            {configuredDaysCount} DAYS CONFIGURED
+          </span>
+        </div>
+
+        <div className="font-mono text-xs text-secondary">
+          CYCLE HORIZON: 7 DAYS
+        </div>
+      </div>
+
+      {/* Weekly Split Grid (7 Days) matching Stitch */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {DAYS.map((dayName, dayIndex) => {
           const plan = plansByDay[dayIndex];
-          const isToday = new Date().getDay() === (dayIndex === 6 ? 0 : dayIndex + 1);
+          const isToday = currentDayOfWeek === dayIndex;
+
+          // Day date of this week
+          const dayDate = new Date(startOfWeek);
+          dayDate.setDate(startOfWeek.getDate() + dayIndex);
+          const dayNum = dayDate.getDate();
 
           return (
             <div
               key={dayName}
-              className={`bg-surface-container-low rounded-2xl p-5 border flex flex-col justify-between shadow-md transition-all ${
+              className={`rounded-lg bg-surface-container-lowest flex flex-col justify-between p-4 min-h-[220px] transition-colors ${
                 isToday
-                  ? 'border-primary-container/50 ring-1 ring-primary-container/20 shadow-[0_0_15px_rgba(0,210,255,0.1)]'
-                  : 'border-outline-variant/20 hover:border-outline-variant/40'
+                  ? 'border-2 border-primary shadow-xs'
+                  : 'border border-outline-variant hover:border-neutral-400'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-                      {dayName}
+                {/* Card Header */}
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-heading text-xs font-semibold text-primary tracking-wider uppercase">
+                      {dayName.substring(0, 3)}
                     </span>
                     {isToday && (
-                      <span className="px-2 py-0.5 rounded-full bg-primary-container/20 text-primary-container text-[10px] font-heading font-extrabold uppercase">
-                        Today
+                      <span className="px-1.5 py-0.2 font-mono text-[9px] font-bold text-primary border border-primary rounded uppercase">
+                        TODAY
                       </span>
                     )}
                   </div>
-
-                  {plan && (
-                    <button
-                      onClick={() => onDeletePlan(plan.id, dayIndex)}
-                      className="text-on-surface-variant hover:text-error p-1"
-                      title="Delete Plan"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </button>
-                  )}
+                  <span className={`font-mono text-xs ${isToday ? 'font-bold text-primary' : 'text-secondary'}`}>
+                    {dayNum}
+                  </span>
                 </div>
 
+                {/* Plan Content */}
                 {plan ? (
-                  <div className="space-y-3">
-                    <div className="bg-surface-container p-3 rounded-xl border border-outline-variant/10">
-                      <div className="font-heading font-bold text-sm text-on-surface">
-                        {plan.workout_name}
-                      </div>
-                      <div className="text-xs text-secondary font-medium">
-                        Target: {plan.muscle_group}
-                      </div>
+                  <div className="space-y-2 py-2">
+                    <div className="font-heading text-sm font-semibold text-primary leading-tight">
+                      {plan.workout_name}
                     </div>
-
-                    {/* Exercises bullet list */}
-                    <div className="space-y-1">
-                      <div className="text-[10px] font-heading font-bold text-on-surface-variant uppercase">
-                        Exercises ({plan.exercises?.length || 0})
-                      </div>
-                      <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
-                        {plan.exercises?.map((ex) => (
-                          <div
-                            key={ex.id}
-                            className="flex items-center justify-between text-xs text-on-surface bg-surface-container-high/40 px-2.5 py-1 rounded-lg"
-                          >
-                            <span className="truncate">{ex.name}</span>
-                            <span className="text-[10px] font-heading font-semibold text-on-surface-variant shrink-0 ml-2">
-                              {ex.target_sets}x{ex.target_reps} @ {ex.target_weight}kg
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="font-mono text-[11px] text-secondary">
+                      Target: {plan.muscle_group}
+                    </div>
+                    <div className="text-[11px] text-secondary">
+                      {plan.exercises?.length || 0} exercises planned
                     </div>
                   </div>
                 ) : (
-                  <div className="py-6 text-center text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[24px] opacity-40 mb-1">
-                      bed
-                    </span>
-                    <div className="text-xs font-semibold">Rest Day / Unconfigured</div>
+                  <div className="py-6 flex flex-col items-center justify-center text-center">
+                    <span className="material-symbols-outlined text-secondary text-[24px] mb-1">bed</span>
+                    <span className="text-xs text-secondary font-medium">Rest Day / Unconfigured</span>
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 mt-4 border-t border-outline-variant/10 flex gap-2">
+              {/* Bottom Card Actions */}
+              <div className="pt-3 border-t border-outline-variant flex items-center gap-1.5">
                 {plan ? (
                   <>
                     <button
                       onClick={() => onLogWorkoutClick(plan)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-secondary-container text-on-secondary-fixed font-heading font-bold text-xs shadow-[0_0_10px_rgba(0,229,153,0.3)] hover:scale-[1.02] transition-transform"
+                      className="flex-1 h-8 px-2 bg-primary text-on-primary text-xs font-medium rounded hover:bg-neutral-800 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-                      <span>Log Session</span>
+                      <span className="material-symbols-outlined text-[14px]">check</span>
+                      <span>Log</span>
                     </button>
                     <button
                       onClick={() => onConfigurePlan(dayIndex, plan)}
-                      className="px-3 py-2 rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface font-heading font-bold text-xs"
                       title="Edit Split"
+                      className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface text-secondary hover:text-primary transition-colors cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                      <span className="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                    <button
+                      onClick={() => onDeletePlan(plan.id, plan.day_of_week)}
+                      title="Clear Split"
+                      className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface text-secondary hover:text-primary transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => onConfigurePlan(dayIndex)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface font-heading font-bold text-xs transition-colors"
+                    className="w-full h-8 px-2 bg-surface-container-lowest text-primary text-xs font-medium rounded border border-outline-variant hover:bg-surface transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[16px]">add</span>
+                    <span className="material-symbols-outlined text-[14px]">add</span>
                     <span>Set Workout Plan</span>
                   </button>
                 )}
@@ -159,34 +204,7 @@ export const WeeklySplitView: React.FC<WeeklySplitViewProps> = ({
             </div>
           );
         })}
-      </div>
-
-      {/* Recent Workout History Table */}
-      {workoutLogs.length > 0 && (
-        <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-5 space-y-3 shadow-lg">
-          <div className="font-heading text-xs font-bold text-on-surface uppercase tracking-wider">
-            Completed Workout Log History
-          </div>
-          <div className="divide-y divide-outline-variant/10">
-            {workoutLogs.slice(0, 5).map((log) => (
-              <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-heading font-bold text-on-surface">{log.workout_name}</span>
-                  <span className="text-on-surface-variant ml-2 font-medium">({log.date})</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-primary-container font-heading font-semibold">
-                    ⏱️ {log.duration_minutes} mins
-                  </span>
-                  <span className="text-secondary font-heading font-semibold">
-                    🏋️ {log.exercise_logs?.length || 0} exercises
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 };

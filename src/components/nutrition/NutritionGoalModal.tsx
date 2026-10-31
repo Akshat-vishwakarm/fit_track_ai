@@ -44,7 +44,7 @@ export const NutritionGoalModal: React.FC<NutritionGoalModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Configure Daily Nutrition Targets">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+          <label className="block text-xs font-mono uppercase text-secondary mb-1">
             Daily Calorie Target (kcal) *
           </label>
           <input
@@ -54,13 +54,13 @@ export const NutritionGoalModal: React.FC<NutritionGoalModalProps> = ({
             max="10000"
             value={calories}
             onChange={(e) => setCalories(Number(e.target.value))}
-            className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+            className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Protein (g)
             </label>
             <input
@@ -68,11 +68,11 @@ export const NutritionGoalModal: React.FC<NutritionGoalModalProps> = ({
               min="0"
               value={protein}
               onChange={(e) => setProtein(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Carbs (g)
             </label>
             <input
@@ -80,11 +80,11 @@ export const NutritionGoalModal: React.FC<NutritionGoalModalProps> = ({
               min="0"
               value={carbs}
               onChange={(e) => setCarbs(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+            <label className="block text-xs font-mono uppercase text-secondary mb-1">
               Fats (g)
             </label>
             <input
@@ -92,24 +92,24 @@ export const NutritionGoalModal: React.FC<NutritionGoalModalProps> = ({
               min="0"
               value={fats}
               onChange={(e) => setFats(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none focus:border-primary-container"
+              className="w-full px-3 py-2 rounded bg-surface-container-low border border-outline-variant text-primary text-sm focus:outline-none focus:border-primary font-mono"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-outline-variant/20">
+        <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant text-xs font-semibold"
+            className="px-4 py-2 rounded border border-outline-variant text-secondary hover:text-primary transition-colors text-xs font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-5 py-2 rounded-xl bg-primary-container text-on-primary-fixed text-xs font-bold shadow-[0_0_12px_rgba(0,210,255,0.3)]"
+            className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-neutral-800 transition-colors text-xs font-medium"
           >
-            Save Targets
+            Save Target Budget
           </button>
         </div>
       </form>
