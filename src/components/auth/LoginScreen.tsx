@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
-import { auth, googleProvider } from '../../firebase/config';
+import { useAuth } from '../../context/AuthContext';
 import { RADIOACTIVE_LOGO } from '../../assets/logo';
 
 interface LoginScreenProps {
@@ -8,30 +7,24 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLocalGuestLogin }) => {
+  const { signInWithGoogle, authError, clearAuthError, loginAsGuest } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleGoogleSignIn = async () => {
+  const handleSignIn = async (mode: 'popup' | 'redirect' = 'popup') => {
     setLoading(true);
-    setErrorMsg('');
+    setLocalError(null);
+    clearAuthError();
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithGoogle(mode);
     } catch (err: any) {
-      console.warn('Google Sign-In popup error, trying redirect method:', err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (redirectErr: any) {
-          setErrorMsg('Popup was blocked. Please allow popups or try again.');
-        }
-      } else {
-        setErrorMsg(err?.message || 'Failed to sign in with Google. Please try again.');
-      }
+      setLocalError(err?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const activeError = authError || localError;
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex items-center justify-center p-4 relative overflow-hidden">
@@ -48,7 +41,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLocalGuestLogin }) =
       </div>
 
       {/* Main Minimalist Auth Card */}
-      <div className="w-full max-w-md bg-surface border border-outline rounded-xl p-8 space-y-8 relative z-10">
+      <div className="w-full max-w-md bg-surface border border-outline rounded-xl p-8 space-y-8 relative z-10 shadow-lg">
         {/* Brand Logo & Header */}
         <div className="flex flex-col items-center text-center space-y-3">
           <img
@@ -70,24 +63,40 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLocalGuestLogin }) =
         </div>
 
         {/* Error Alert Banner */}
-        {errorMsg && (
-          <div className="bg-surface-variant border border-outline text-on-surface p-3 rounded-lg text-xs font-mono flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
-            <span>{errorMsg}</span>
+        {activeError && (
+          <div className="bg-surface-variant border border-outline text-on-surface p-3.5 rounded-lg text-xs font-mono space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="material-symbols-outlined text-[16px] text-error shrink-0 mt-0.5">error</span>
+              <div className="flex-1 break-words">{activeError}</div>
+              <button
+                onClick={() => {
+                  setLocalError(null);
+                  clearAuthError();
+                }}
+                className="text-[10px] uppercase font-bold text-secondary hover:text-primary underline ml-1"
+              >
+                Dismiss
+              </button>
+            </div>
+            {activeError.includes('not authorized') && (
+              <div className="text-[10px] text-secondary leading-normal pt-1 border-t border-outline/30">
+                Tip: Open Firebase Console &gt; Authentication &gt; Settings &gt; Authorized Domains and add your current host: <strong className="text-primary">{window.location.hostname}</strong>
+              </div>
+            )}
           </div>
         )}
 
         {/* Primary Action: Continue with Google */}
         <div className="space-y-3">
           <button
-            onClick={handleGoogleSignIn}
+            onClick={() => handleSignIn('popup')}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-primary hover:bg-[#222222] text-on-primary font-heading font-bold text-xs transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-primary hover:bg-[#222222] text-on-primary font-heading font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
           >
             {loading ? (
               <div className="flex items-center gap-2 font-mono">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>AUTHENTICATING...</span>
+                <span>AUTHENTICATING WITH GOOGLE...</span>
               </div>
             ) : (
               <>
@@ -99,14 +108,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLocalGuestLogin }) =
             )}
           </button>
 
-          {onLocalGuestLogin && (
-            <button
-              onClick={onLocalGuestLogin}
-              className="w-full text-center py-2.5 px-4 rounded-lg bg-surface hover:bg-surface-variant border border-outline text-xs font-mono font-bold text-on-surface transition-colors"
-            >
-              LAUNCH LOCAL GUEST PROFILE
-            </button>
-          )}
+          {/* Alternate Redirect Mode for mobile or strict popup blocker environments */}
+          <button
+            onClick={() => handleSignIn('redirect')}
+            disabled={loading}
+            className="w-full text-center py-2 text-[11px] font-mono text-secondary hover:text-primary transition-colors cursor-pointer"
+          >
+            Trouble with popups? Use Full-Page Redirect &rarr;
+          </button>
+
+          {/* Local Guest Mode for instant offline testing */}
+          <button
+            onClick={onLocalGuestLogin || loginAsGuest}
+            disabled={loading}
+            className="w-full text-center py-2.5 px-4 rounded-lg bg-surface hover:bg-surface-variant border border-outline text-xs font-mono font-bold text-on-surface transition-colors cursor-pointer"
+          >
+            LAUNCH LOCAL GUEST PROFILE
+          </button>
         </div>
 
         {/* Security Disclaimers */}

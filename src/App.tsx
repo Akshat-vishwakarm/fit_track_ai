@@ -100,15 +100,19 @@ const MainLayout: React.FC = () => {
 };
 
 const AuthGuard: React.FC = () => {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, loginAsGuest } = useAuth();
 
   if (authLoading) {
     return (
       <div className="min-h-screen bg-surface-container-lowest flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <img
+            src={RADIOACTIVE_LOGO}
+            alt="Radioactive"
+            className="w-10 h-10 rounded-lg object-contain bg-white border border-outline-variant p-1 animate-pulse"
+          />
           <div className="font-mono text-xs text-secondary uppercase tracking-wider">
-            Verifying Credentials...
+            Verifying Authentication...
           </div>
         </div>
       </div>
@@ -116,7 +120,7 @@ const AuthGuard: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <LoginScreen />;
+    return <LoginScreen onLocalGuestLogin={loginAsGuest} />;
   }
 
   return (

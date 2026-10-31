@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
@@ -18,8 +23,16 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
+
+// Explicitly guarantee browser local persistence for sessions
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.warn('[Firebase Auth] Persistence initialization warning:', err?.message || err);
+});
+
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
 
 export const firestoreDb = getFirestore(app);
 
@@ -27,4 +40,3 @@ export const firestoreDb = getFirestore(app);
 export const analyticsPromise = isSupported().then((supported) => (supported ? getAnalytics(app) : null));
 
 export default app;
-
