@@ -5,21 +5,19 @@ import { formatLocalDate } from '../utils/dateUtils';
 
 export const habitService = {
   async getHabits(userId: string): Promise<Habit[]> {
-    const localHabits = await db.habits.where('user_id').equals(userId).toArray();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getHabits(userId)
-      .then((fsHabits) => {
-        if (fsHabits && fsHabits.length > 0) {
-          for (const h of fsHabits) {
-            db.habits.put(h).catch(() => {});
-          }
+    try {
+      const fsHabits = await firestoreService.getHabits(userId);
+      if (fsHabits && fsHabits.length > 0) {
+        for (const h of fsHabits) {
+          await db.habits.put(h).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsHabits;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getHabits error, falling back to local Dexie:', err);
+    }
 
-    return localHabits;
+    return await db.habits.where('user_id').equals(userId).toArray();
   },
 
   async getActiveHabits(userId: string): Promise<Habit[]> {
@@ -36,25 +34,33 @@ export const habitService = {
     };
     await db.habits.put(newHabit).catch(() => {});
 
-    // Non-blocking Firestore background sync with exact matching ID
-    firestoreService.saveHabit(habit.user_id, newHabit).catch((err) => {
-      console.warn('Background saveHabit error:', err);
+    // Save directly to Firestore under users/{userId}/habits/{habitId}
+    await firestoreService.saveHabit(habit.user_id, newHabit).catch((err) => {
+      console.warn('saveHabit error to Firestore:', err);
     });
 
     return newHabit;
   },
 
-  async updateHabit(id: string, updates: Partial<Habit>): Promise<void> {
+  async updateHabit(id: string, updates: Partial<Habit>, userId?: string): Promise<void> {
     await db.habits.update(id, updates);
+    const updated = await db.habits.get(id);
+    if (updated && (userId || updated.user_id)) {
+      await firestoreService.saveHabit(userId || updated.user_id, updated).catch(() => {});
+    }
   },
 
   async deleteHabit(id: string, userId?: string): Promise<void> {
+    const existing = await db.habits.get(id);
+    const ownerId = userId || existing?.user_id;
+
     await db.transaction('rw', [db.habits, db.habitCompletions], async () => {
       await db.habits.delete(id);
       await db.habitCompletions.where('habit_id').equals(id).delete();
     });
-    if (userId) {
-      firestoreService.deleteHabit(userId, id).catch(() => {});
+
+    if (ownerId) {
+      await firestoreService.deleteHabit(ownerId, id).catch(() => {});
     }
   },
 
@@ -79,33 +85,31 @@ export const habitService = {
       await db.habitCompletions.add(newComp);
     }
 
-    firestoreService.toggleCompletion(userId, habitId, dateStr).catch(() => {});
+    await firestoreService.toggleCompletion(userId, habitId, dateStr).catch(() => {});
     return newStatus;
   },
 
   async clearAllCompletions(userId: string): Promise<void> {
     await db.habitCompletions.where('user_id').equals(userId).delete();
     if (userId) {
-      firestoreService.clearAllCompletions(userId).catch(() => {});
+      await firestoreService.clearAllCompletions(userId).catch(() => {});
     }
   },
 
   async getCompletions(userId: string): Promise<HabitCompletion[]> {
-    const localComps = await db.habitCompletions.where('user_id').equals(userId).toArray();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getCompletions(userId)
-      .then((fsComps) => {
-        if (fsComps && fsComps.length > 0) {
-          for (const c of fsComps) {
-            db.habitCompletions.put(c).catch(() => {});
-          }
+    try {
+      const fsComps = await firestoreService.getCompletions(userId);
+      if (fsComps && fsComps.length > 0) {
+        for (const c of fsComps) {
+          await db.habitCompletions.put(c).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsComps;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getCompletions error, falling back to local Dexie:', err);
+    }
 
-    return localComps;
+    return await db.habitCompletions.where('user_id').equals(userId).toArray();
   },
 
   async getCompletionsMap(userId: string): Promise<Record<string, Record<string, boolean>>> {
@@ -195,5 +199,3 @@ export const habitService = {
     };
   },
 };
-
-

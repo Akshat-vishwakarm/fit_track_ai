@@ -69,6 +69,12 @@ Designed in alignment with the **Google Stitch Monochrome Minimalist** design sy
 * **Measurement Tracker:** Log waist, chest, arms, and body fat percentages.
 * **Fitness Goals:** Target tracking for habit, workout, nutrition, and weight milestones.
 
+### 7. 🔄 Real-Time Multi-Device Cloud Synchronization
+* **Canonical Account Identifier:** Authenticated Firebase UID (users/{uid}/...).
+* **Instant Multi-Device Sync:** Live Firestore onSnapshot listeners automatically propagate changes across devices in real time without refreshing.
+* **Resilient Offline Cache:** Local Dexie (IndexedDB) database acts as a seamless optimistic cache for offline usage, auto-migrating and reconciling with Cloud Firestore on reconnect.
+* **Zero Session Wipe:** Safe session lifecycle guarantees logging in on a new device or browser never overwrites or wipes existing telemetry.
+
 ---
 
 ## 🔑 Personal API Token System (REST API v1)

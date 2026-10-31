@@ -1,15 +1,11 @@
 import { db } from '../db/database';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import { firestoreDb } from '../firebase/config';
 import type { FocusDeadline } from '../types';
 
 export const focusDeadlineService = {
   async getActiveDeadline(userId: string): Promise<FocusDeadline | null> {
-    const list = await db.focusDeadlines
-      .where('user_id')
-      .equals(userId)
-      .toArray();
-
+    const list = await this.getAllDeadlines(userId);
     const activeList = list.filter((d) => d.active);
     if (activeList.length === 0) return null;
 
@@ -18,6 +14,20 @@ export const focusDeadlineService = {
   },
 
   async getAllDeadlines(userId: string): Promise<FocusDeadline[]> {
+    try {
+      const colRef = collection(firestoreDb, 'users', userId, 'focusDeadlines');
+      const snap = await getDocs(colRef);
+      if (!snap.empty) {
+        const cloudDeadlines = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FocusDeadline));
+        for (const dl of cloudDeadlines) {
+          await db.focusDeadlines.put(dl).catch(() => {});
+        }
+        return cloudDeadlines;
+      }
+    } catch {
+      // offline fallback
+    }
+
     return await db.focusDeadlines
       .where('user_id')
       .equals(userId)
@@ -34,14 +44,17 @@ export const focusDeadlineService = {
     }
   ): Promise<FocusDeadline> {
     // Deactivate previous active deadlines to ensure single high-focus active target
-    const existing = await db.focusDeadlines
-      .where('user_id')
-      .equals(userId)
-      .toArray();
+    const existing = await this.getAllDeadlines(userId);
 
     for (const d of existing) {
       if (d.active) {
         await db.focusDeadlines.update(d.id, { active: false });
+        try {
+          const docRef = doc(firestoreDb, 'users', userId, 'focusDeadlines', d.id);
+          await setDoc(docRef, { active: false }, { merge: true }).catch(() => {});
+        } catch {
+          // offline
+        }
       }
     }
 
@@ -61,7 +74,7 @@ export const focusDeadlineService = {
     // Sync to Firestore
     try {
       const docRef = doc(firestoreDb, 'users', userId, 'focusDeadlines', newDeadline.id);
-      setDoc(docRef, newDeadline, { merge: true }).catch(() => {});
+      await setDoc(docRef, newDeadline, { merge: true }).catch(() => {});
     } catch {
       // offline resilience
     }
@@ -69,15 +82,23 @@ export const focusDeadlineService = {
     return newDeadline;
   },
 
-  async updateDeadline(id: string, updates: Partial<FocusDeadline>): Promise<void> {
+  async updateDeadline(id: string, updates: Partial<FocusDeadline>, userId?: string): Promise<void> {
     await db.focusDeadlines.update(id, updates);
+    if (userId) {
+      try {
+        const docRef = doc(firestoreDb, 'users', userId, 'focusDeadlines', id);
+        await setDoc(docRef, updates, { merge: true }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
   },
 
   async deleteDeadline(userId: string, id: string): Promise<void> {
     await db.focusDeadlines.delete(id);
     try {
       const docRef = doc(firestoreDb, 'users', userId, 'focusDeadlines', id);
-      deleteDoc(docRef).catch(() => {});
+      await deleteDoc(docRef).catch(() => {});
     } catch {
       // ignore
     }
@@ -87,7 +108,7 @@ export const focusDeadlineService = {
     await db.focusDeadlines.update(id, { active: false });
     try {
       const docRef = doc(firestoreDb, 'users', userId, 'focusDeadlines', id);
-      setDoc(docRef, { active: false }, { merge: true }).catch(() => {});
+      await setDoc(docRef, { active: false }, { merge: true }).catch(() => {});
     } catch {
       // ignore
     }

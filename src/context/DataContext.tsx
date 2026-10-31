@@ -17,6 +17,7 @@ import { nutritionService } from '../services/nutritionService';
 import { progressService } from '../services/progressService';
 import { goalService } from '../services/goalService';
 import { mlService } from '../services/ml/mlService';
+import { firestoreService } from '../services/firestoreService';
 import { formatLocalDate } from '../utils/dateUtils';
 
 interface DataContextType {
@@ -68,6 +69,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [mlConfig, setMlConfig] = useState<MLConfig | null>(null);
   const [mlPrediction, setMlPrediction] = useState<MLPredictionResult | null>(null);
 
+  // Fallback explicit refresher
   const refreshData = useCallback(async () => {
     if (!currentUser) {
       setHabits([]);
@@ -90,13 +92,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const userId = currentUser.id;
     const todayStr = formatLocalDate();
-
-    // Auto-clean past completions once so all checkboxes start empty as requested
-    const hasCleaned = localStorage.getItem('fittrack_completions_cleaned_v1');
-    if (!hasCleaned) {
-      localStorage.setItem('fittrack_completions_cleaned_v1', 'true');
-      await habitService.clearAllCompletions(userId);
-    }
 
     try {
       const [
@@ -129,30 +124,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mlService.getInsights(userId),
       ]);
 
-      // Auto-split any habit with goal_target > 1 into separate numbered rows (e.g. "gym 1", "gym 2")
-      let activeHabits = fetchedHabits;
-      const multiHabits = fetchedHabits.filter((h) => h.goal_target > 1);
-      if (multiHabits.length > 0) {
-        for (const mh of multiHabits) {
-          await habitService.deleteHabit(mh.id, userId);
-          for (let i = 1; i <= mh.goal_target; i++) {
-            await habitService.createHabit({
-              user_id: userId,
-              name: `${mh.name} ${i}`,
-              icon: mh.icon,
-              category: mh.category,
-              frequency: mh.frequency,
-              goal_target: 1,
-              unit: mh.unit,
-              color: mh.color,
-              start_date: mh.start_date,
-            });
-          }
-        }
-        activeHabits = await habitService.getHabits(userId);
-      }
-
-      setHabits(activeHabits);
+      setHabits(fetchedHabits);
       setCompletionsMap(fetchedCompletionsMap);
       setStreak(fetchedStreak);
       setWorkoutPlans(fetchedPlans);
@@ -173,21 +145,178 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
+  // Real-time multi-device cloud synchronization listener
   useEffect(() => {
+    if (!currentUser) {
+      setHabits([]);
+      setCompletionsMap({});
+      setStreak({ currentStreak: 0, bestStreak: 0 });
+      setWorkoutPlans([]);
+      setWorkoutLogs([]);
+      setNutritionGoal(null);
+      setTodayMeals([]);
+      setAllMeals([]);
+      setTodayConsumed({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+      setProgressEntries([]);
+      setLatestWeight(null);
+      setGoals([]);
+      setMlConfig(null);
+      setMlPrediction(null);
+      setLoading(false);
+      return;
+    }
+
+    const userId = currentUser.id;
+    setLoading(true);
+
+    // 1. One-time upload of any local records that haven't reached cloud yet
+    firestoreService.migrateLocalDataToCloud(userId).catch((err) => {
+      console.warn('migrateLocalDataToCloud non-critical error:', err);
+    });
+
+    // 2. Initial load from local/cache for immediate responsiveness
     refreshData();
-  }, [refreshData]);
+
+    // 3. Real-time multi-device Firestore onSnapshot subscriptions
+    const unsubscribe = firestoreService.subscribeToUserData(userId, async (data) => {
+      const todayStr = formatLocalDate();
+
+      // Habits
+      if (data.habits !== undefined) {
+        setHabits(data.habits);
+      }
+
+      // Habit Completions Map & Streak
+      const comps = data.habitCompletions || data.completions;
+      if (comps !== undefined) {
+        const map: Record<string, Record<string, boolean>> = {};
+        const completedDates = new Set<string>();
+        for (const c of comps) {
+          if (!map[c.habit_id]) map[c.habit_id] = {};
+          map[c.habit_id][c.date] = c.completed;
+          if (c.completed) completedDates.add(c.date);
+        }
+        setCompletionsMap(map);
+
+        // Calculate streak
+        setHabits((currentHabits) => {
+          const activeHabits = currentHabits.filter((h) => !h.archived);
+          if (activeHabits.length > 0 && completedDates.size > 0) {
+            let currentStreak = 0;
+            let bestStreak = 0;
+            let tempStreak = 0;
+            let checkDate = new Date();
+            const curDateStr = formatLocalDate(checkDate);
+            const hasToday = completedDates.has(curDateStr);
+
+            if (!hasToday) {
+              checkDate.setDate(checkDate.getDate() - 1);
+              while (completedDates.has(formatLocalDate(checkDate))) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+              }
+            } else {
+              while (completedDates.has(formatLocalDate(checkDate))) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+              }
+            }
+
+            const sortedDates = Array.from(completedDates).sort();
+            let prevTime: number | null = null;
+            for (const dStr of sortedDates) {
+              const dateTime = new Date(dStr).getTime();
+              if (prevTime === null) {
+                tempStreak = 1;
+              } else {
+                const diffDays = Math.round((dateTime - prevTime) / (1000 * 3600 * 24));
+                if (diffDays === 1) tempStreak++;
+                else if (diffDays > 1) tempStreak = 1;
+              }
+              prevTime = dateTime;
+              if (tempStreak > bestStreak) bestStreak = tempStreak;
+            }
+
+            setStreak({
+              currentStreak,
+              bestStreak: Math.max(bestStreak, currentStreak),
+            });
+          }
+          return currentHabits;
+        });
+      }
+
+      // Workout Plans & Logs
+      if (data.workoutPlans !== undefined) {
+        setWorkoutPlans(data.workoutPlans);
+      }
+      if (data.workoutLogs !== undefined) {
+        setWorkoutLogs(data.workoutLogs);
+      }
+
+      // Nutrition Goal
+      if (data.nutritionGoal !== undefined) {
+        setNutritionGoal(data.nutritionGoal);
+      }
+
+      // Meals & Daily Summary
+      if (data.mealEntries !== undefined) {
+        setAllMeals(data.mealEntries);
+        const todays = data.mealEntries.filter((m) => m.date === todayStr);
+        setTodayMeals(todays);
+        const consumed = todays.reduce(
+          (acc, entry) => ({
+            calories: acc.calories + (entry.calories || 0),
+            protein: acc.protein + (entry.protein || 0),
+            carbs: acc.carbs + (entry.carbs || 0),
+            fats: acc.fats + (entry.fats || 0),
+          }),
+          { calories: 0, protein: 0, carbs: 0, fats: 0 }
+        );
+        setTodayConsumed(consumed);
+      }
+
+      // Progress & Weight
+      if (data.progressEntries !== undefined) {
+        setProgressEntries(data.progressEntries);
+        if (data.progressEntries.length > 0) {
+          const sortedProgress = [...data.progressEntries].sort((a, b) => b.date.localeCompare(a.date));
+          setLatestWeight(sortedProgress[0].weight ?? null);
+        } else {
+          setLatestWeight(null);
+        }
+      }
+
+      // Goals
+      if (data.goals !== undefined) {
+        setGoals(data.goals);
+      }
+
+      // Once initial snapshot arrives, dismiss loading screen
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser, refreshData]);
 
   const toggleHabit = async (habitId: string, dateStr: string): Promise<boolean> => {
     if (!currentUser) return false;
     const newStatus = await habitService.toggleCompletion(currentUser.id, habitId, dateStr);
-    await refreshData();
+    // Optimistic state update
+    setCompletionsMap((prev) => {
+      const nextHabit = { ...(prev[habitId] || {}) };
+      nextHabit[dateStr] = newStatus;
+      return { ...prev, [habitId]: nextHabit };
+    });
     return newStatus;
   };
 
   const clearAllCompletions = async (): Promise<void> => {
     if (!currentUser) return;
     await habitService.clearAllCompletions(currentUser.id);
-    await refreshData();
+    setCompletionsMap({});
   };
 
   return (

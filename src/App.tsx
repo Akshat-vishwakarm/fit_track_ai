@@ -28,6 +28,12 @@ const MainLayout: React.FC = () => {
           <img
             src={RADIOACTIVE_LOGO}
             alt="Radioactive"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== '/radioactive-logo.jpg') {
+                target.src = '/radioactive-logo.jpg';
+              }
+            }}
             className="w-10 h-10 rounded-lg object-contain bg-white border border-outline-variant p-1 animate-pulse"
           />
           <div className="font-mono text-xs text-secondary uppercase tracking-wider">
@@ -109,6 +115,12 @@ const AuthGuard: React.FC = () => {
           <img
             src={RADIOACTIVE_LOGO}
             alt="Radioactive"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== '/radioactive-logo.jpg') {
+                target.src = '/radioactive-logo.jpg';
+              }
+            }}
             className="w-10 h-10 rounded-lg object-contain bg-white border border-outline-variant p-1 animate-pulse"
           />
           <div className="font-mono text-xs text-secondary uppercase tracking-wider">

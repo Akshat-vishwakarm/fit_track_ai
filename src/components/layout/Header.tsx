@@ -28,6 +28,12 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           <img
             src={RADIOACTIVE_LOGO}
             alt="Radioactive"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== '/radioactive-logo.jpg') {
+                target.src = '/radioactive-logo.jpg';
+              }
+            }}
             className="w-6 h-6 rounded object-contain bg-white border border-outline-variant shrink-0"
           />
           <span className="font-heading text-xs font-extrabold text-primary uppercase">Radioactive</span>

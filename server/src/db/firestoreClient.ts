@@ -63,23 +63,22 @@ export function setCloudFirestoreDisabled(disabled: boolean) {
   isCloudFirestoreDisabled = disabled;
 }
 
-const withTimeout = async <T>(promise: Promise<T>, fallback: T, ms = 300): Promise<T> => {
+const withTimeout = async <T>(promise: Promise<T>, fallback: T, ms = 8000): Promise<T> => {
   if (isCloudFirestoreDisabled) return fallback;
   try {
     return await Promise.race([
-      promise.catch(() => {
-        isCloudFirestoreDisabled = true;
+      promise.catch((err) => {
+        console.warn('Firestore operation failed, using fallback:', err?.message || err);
         return fallback;
       }),
       new Promise<T>((resolve) =>
         setTimeout(() => {
-          isCloudFirestoreDisabled = true;
+          console.warn(`Firestore operation timed out after ${ms}ms, using fallback`);
           resolve(fallback);
         }, ms)
       ),
     ]);
   } catch {
-    isCloudFirestoreDisabled = true;
     return fallback;
   }
 };

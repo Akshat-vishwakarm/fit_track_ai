@@ -7,7 +7,10 @@ process.env.NODE_ENV = 'test';
 
 import { executeTool, allTools } from '../src/tools/registry.js';
 import { resolveUserFromToken } from '../src/auth/authMiddleware.js';
+import { setCloudFirestoreDisabled } from '../src/db/firestoreClient.js';
 import type { UserContext } from '../src/types.js';
+
+setCloudFirestoreDisabled(true);
 
 let passedTests = 0;
 let failedTests = 0;

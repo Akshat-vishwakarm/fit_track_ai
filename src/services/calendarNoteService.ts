@@ -1,5 +1,5 @@
 import { db } from '../db/database';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import { firestoreDb } from '../firebase/config';
 import type { CalendarNote } from '../types';
 
@@ -12,6 +12,20 @@ export const calendarNoteService = {
   },
 
   async getAllNotes(userId: string): Promise<CalendarNote[]> {
+    try {
+      const colRef = collection(firestoreDb, 'users', userId, 'calendarNotes');
+      const snap = await getDocs(colRef);
+      if (!snap.empty) {
+        const cloudNotes = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CalendarNote));
+        for (const n of cloudNotes) {
+          await db.calendarNotes.put(n).catch(() => {});
+        }
+        return cloudNotes;
+      }
+    } catch {
+      // offline fallback
+    }
+
     return await db.calendarNotes
       .where('user_id')
       .equals(userId)
@@ -41,7 +55,7 @@ export const calendarNoteService = {
 
       try {
         const docRef = doc(firestoreDb, 'users', userId, 'calendarNotes', existing.id);
-        setDoc(docRef, updated, { merge: true }).catch(() => {});
+        await setDoc(docRef, updated, { merge: true }).catch(() => {});
       } catch {
         // offline
       }
@@ -62,7 +76,7 @@ export const calendarNoteService = {
 
       try {
         const docRef = doc(firestoreDb, 'users', userId, 'calendarNotes', newNote.id);
-        setDoc(docRef, newNote, { merge: true }).catch(() => {});
+        await setDoc(docRef, newNote, { merge: true }).catch(() => {});
       } catch {
         // offline
       }
@@ -74,10 +88,9 @@ export const calendarNoteService = {
     await db.calendarNotes.delete(id);
     try {
       const docRef = doc(firestoreDb, 'users', userId, 'calendarNotes', id);
-      deleteDoc(docRef).catch(() => {});
+      await deleteDoc(docRef).catch(() => {});
     } catch {
       // offline
     }
   },
 };
-

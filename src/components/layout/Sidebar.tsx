@@ -26,7 +26,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="flex items-center gap-2.5">
           <img
             src={RADIOACTIVE_LOGO}
-            alt="Radioactive Logo"
+            alt="Radioactive"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== '/radioactive-logo.jpg') {
+                target.src = '/radioactive-logo.jpg';
+              }
+            }}
             className="w-7 h-7 rounded object-contain bg-white border border-outline-variant shrink-0"
           />
           <span className="font-heading text-sm text-primary tracking-tight font-extrabold uppercase">

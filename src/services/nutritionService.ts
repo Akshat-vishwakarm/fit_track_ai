@@ -4,18 +4,17 @@ import type { NutritionGoal, MealEntry } from '../types';
 
 export const nutritionService = {
   async getNutritionGoal(userId: string): Promise<NutritionGoal | null> {
+    try {
+      const fsGoal = await firestoreService.getNutritionGoal(userId);
+      if (fsGoal) {
+        await db.nutritionGoals.put(fsGoal).catch(() => {});
+        return fsGoal;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getNutritionGoal error, falling back to local Dexie:', err);
+    }
+
     const localGoal = await db.nutritionGoals.where('user_id').equals(userId).first();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getNutritionGoal(userId)
-      .then((fsGoal) => {
-        if (fsGoal) {
-          db.nutritionGoals.put(fsGoal).catch(() => {});
-        }
-      })
-      .catch(() => {});
-
     return localGoal || null;
   },
 
@@ -42,8 +41,8 @@ export const nutritionService = {
       await db.nutritionGoals.add(resultGoal);
     }
 
-    firestoreService.saveNutritionGoal(userId, goals).catch((err) => {
-      console.warn('Background saveNutritionGoal error:', err);
+    await firestoreService.saveNutritionGoal(userId, goals).catch((err) => {
+      console.warn('saveNutritionGoal error to Firestore:', err);
     });
 
     return resultGoal;
@@ -55,21 +54,19 @@ export const nutritionService = {
   },
 
   async getMealEntries(userId: string): Promise<MealEntry[]> {
-    const localMeals = await db.mealEntries.where('user_id').equals(userId).toArray();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getMealEntries(userId)
-      .then((fsMeals) => {
-        if (fsMeals && fsMeals.length > 0) {
-          for (const m of fsMeals) {
-            db.mealEntries.put(m).catch(() => {});
-          }
+    try {
+      const fsMeals = await firestoreService.getMealEntries(userId);
+      if (fsMeals && fsMeals.length > 0) {
+        for (const m of fsMeals) {
+          await db.mealEntries.put(m).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsMeals;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getMealEntries error, falling back to local Dexie:', err);
+    }
 
-    return localMeals;
+    return await db.mealEntries.where('user_id').equals(userId).toArray();
   },
 
   async addMealEntry(meal: Omit<MealEntry, 'id' | 'created_at'>): Promise<MealEntry> {
@@ -83,8 +80,8 @@ export const nutritionService = {
     };
     await db.mealEntries.add(newEntry);
 
-    firestoreService.addMealEntry(meal.user_id, newEntry).catch((err) => {
-      console.warn('Background addMealEntry error:', err);
+    await firestoreService.addMealEntry(meal.user_id, newEntry).catch((err) => {
+      console.warn('addMealEntry error to Firestore:', err);
     });
 
     return newEntry;
@@ -92,40 +89,40 @@ export const nutritionService = {
 
   async updateMealEntry(id: string, updates: Partial<MealEntry>, userId?: string): Promise<void> {
     await db.mealEntries.update(id, updates);
-    if (userId) {
-      firestoreService.updateMealEntry(userId, id, updates).catch(() => {});
+    const existing = await db.mealEntries.get(id);
+    const ownerId = userId || existing?.user_id;
+    if (ownerId) {
+      await firestoreService.updateMealEntry(ownerId, id, updates).catch(() => {});
     }
   },
 
   async deleteMealEntry(id: string, userId?: string): Promise<void> {
+    const existing = await db.mealEntries.get(id);
+    const ownerId = userId || existing?.user_id;
     await db.mealEntries.delete(id);
-    if (userId) {
-      firestoreService.deleteMealEntry(userId, id).catch(() => {});
+    if (ownerId) {
+      await firestoreService.deleteMealEntry(ownerId, id).catch(() => {});
     }
   },
 
-  async getDailySummary(userId: string, dateStr: string) {
+  async getDailySummary(
+    userId: string,
+    dateStr: string
+  ): Promise<{
+    consumed: { calories: number; protein: number; carbs: number; fats: number };
+    entries: MealEntry[];
+  }> {
     const entries = await this.getMealEntriesForDate(userId, dateStr);
-    const goal = await this.getNutritionGoal(userId);
-
     const consumed = entries.reduce(
-      (acc, curr) => {
-        acc.calories += curr.calories || 0;
-        acc.protein += curr.protein || 0;
-        acc.carbs += curr.carbs || 0;
-        acc.fats += curr.fats || 0;
-        return acc;
-      },
+      (acc, entry) => ({
+        calories: acc.calories + (entry.calories || 0),
+        protein: acc.protein + (entry.protein || 0),
+        carbs: acc.carbs + (entry.carbs || 0),
+        fats: acc.fats + (entry.fats || 0),
+      }),
       { calories: 0, protein: 0, carbs: 0, fats: 0 }
     );
 
-    return {
-      date: dateStr,
-      goal,
-      consumed,
-      entries,
-    };
+    return { consumed, entries };
   },
 };
-
-

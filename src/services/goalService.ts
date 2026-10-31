@@ -4,21 +4,19 @@ import type { Goal } from '../types';
 
 export const goalService = {
   async getGoals(userId: string): Promise<Goal[]> {
-    const localGoals = await db.goals.where('user_id').equals(userId).toArray();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getGoals(userId)
-      .then((fsGoals) => {
-        if (fsGoals && fsGoals.length > 0) {
-          for (const g of fsGoals) {
-            db.goals.put(g).catch(() => {});
-          }
+    try {
+      const fsGoals = await firestoreService.getGoals(userId);
+      if (fsGoals && fsGoals.length > 0) {
+        for (const g of fsGoals) {
+          await db.goals.put(g).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsGoals;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getGoals error, falling back to local Dexie:', err);
+    }
 
-    return localGoals;
+    return await db.goals.where('user_id').equals(userId).toArray();
   },
 
   async addGoal(goal: Omit<Goal, 'id' | 'created_at' | 'status'>): Promise<Goal> {
@@ -30,23 +28,28 @@ export const goalService = {
     };
     await db.goals.add(newGoal);
 
-    firestoreService.addGoal(goal.user_id, goal).catch((err) => {
-      console.warn('Background addGoal error:', err);
+    await firestoreService.addGoal(goal.user_id, newGoal).catch((err) => {
+      console.warn('addGoal error to Firestore:', err);
     });
 
     return newGoal;
   },
 
-  async updateGoal(id: string, updates: Partial<Goal>): Promise<void> {
+  async updateGoal(id: string, updates: Partial<Goal>, userId?: string): Promise<void> {
     await db.goals.update(id, updates);
+    const existing = await db.goals.get(id);
+    const ownerId = userId || existing?.user_id;
+    if (ownerId && existing) {
+      await firestoreService.addGoal(ownerId, existing).catch(() => {});
+    }
   },
 
   async deleteGoal(id: string, userId?: string): Promise<void> {
+    const existing = await db.goals.get(id);
+    const ownerId = userId || existing?.user_id;
     await db.goals.delete(id);
-    if (userId) {
-      firestoreService.deleteGoal(userId, id).catch(() => {});
+    if (ownerId) {
+      await firestoreService.deleteGoal(ownerId, id).catch(() => {});
     }
   },
 };
-
-

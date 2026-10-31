@@ -4,21 +4,19 @@ import type { WorkoutPlan, WorkoutLog } from '../types';
 
 export const workoutService = {
   async getWorkoutPlans(userId: string): Promise<WorkoutPlan[]> {
-    const localPlans = await db.workoutPlans.where('user_id').equals(userId).toArray();
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getWorkoutPlans(userId)
-      .then((fsPlans) => {
-        if (fsPlans && fsPlans.length > 0) {
-          for (const p of fsPlans) {
-            db.workoutPlans.put(p).catch(() => {});
-          }
+    try {
+      const fsPlans = await firestoreService.getWorkoutPlans(userId);
+      if (fsPlans && fsPlans.length > 0) {
+        for (const p of fsPlans) {
+          await db.workoutPlans.put(p).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsPlans;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getWorkoutPlans error, falling back to local Dexie:', err);
+    }
 
-    return localPlans;
+    return await db.workoutPlans.where('user_id').equals(userId).toArray();
   },
 
   async saveWorkoutPlan(
@@ -54,9 +52,9 @@ export const workoutService = {
       await db.workoutPlans.add(plan);
     }
 
-    // Background non-blocking sync to Firestore with explicit plan.id
-    firestoreService.saveWorkoutPlan(userId, dayOfWeek, workoutName, muscleGroup, exercises, plan.id).catch((err) => {
-      console.warn('Background saveWorkoutPlan error:', err);
+    // Direct Firestore cloud persistence under users/{userId}/workoutPlans/{planId}
+    await firestoreService.saveWorkoutPlan(userId, dayOfWeek, workoutName, muscleGroup, exercises, plan.id).catch((err) => {
+      console.warn('saveWorkoutPlan error to Firestore:', err);
     });
 
     return plan;
@@ -85,30 +83,26 @@ export const workoutService = {
     };
     await db.workoutLogs.add(newLog);
 
-    firestoreService.logWorkout(log.user_id, log).catch((err) => {
-      console.warn('Background logWorkout error:', err);
+    await firestoreService.logWorkout(log.user_id, newLog).catch((err) => {
+      console.warn('logWorkout error to Firestore:', err);
     });
 
     return newLog;
   },
 
   async getWorkoutLogs(userId: string): Promise<WorkoutLog[]> {
-    const localLogs = await db.workoutLogs.where('user_id').equals(userId).reverse().sortBy('date');
-
-    // Fire-and-forget background sync
-    firestoreService
-      .getWorkoutLogs(userId)
-      .then((fsLogs) => {
-        if (fsLogs && fsLogs.length > 0) {
-          for (const l of fsLogs) {
-            db.workoutLogs.put(l).catch(() => {});
-          }
+    try {
+      const fsLogs = await firestoreService.getWorkoutLogs(userId);
+      if (fsLogs && fsLogs.length > 0) {
+        for (const l of fsLogs) {
+          await db.workoutLogs.put(l).catch(() => {});
         }
-      })
-      .catch(() => {});
+        return fsLogs;
+      }
+    } catch (err) {
+      console.warn('firestoreService.getWorkoutLogs error, falling back to local Dexie:', err);
+    }
 
-    return localLogs;
+    return await db.workoutLogs.where('user_id').equals(userId).reverse().sortBy('date');
   },
 };
-
-
